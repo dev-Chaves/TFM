@@ -4,4 +4,4 @@ const dbUrl: string = process.env.DATABASE_URL!;
 
 const db = drizzle(dbUrl);
 
-export default db;;
+export default db;

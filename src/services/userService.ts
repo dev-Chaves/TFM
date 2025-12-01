@@ -3,7 +3,7 @@ import userRepository from "../repository/userRepository";
 
 const userService = {
 
-    async exchangeCodeForToken  (code: string): Promise<userResponse> {
+    async exchangeCodeForToken (code: string): Promise<userResponse> {
 
     if(!code) throw new Error("Código inválido.");
 
@@ -25,9 +25,9 @@ const userService = {
 
         if(data.errors) throw new Error("Erro ao trocar o código pelo token.");
 
-        const { acess_token, refresh_token, expirest_at, athlete } = data;
+        const { access_token, refresh_token, expires_at, athlete } = data;
 
-        const user = await userRepository.saveUser(athlete, acess_token, refresh_token, expirest_at);
+        const user = await userRepository.saveUser(athlete, access_token, refresh_token, expires_at);
 
         return {
             id: user.id,
