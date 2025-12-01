@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { date, jsonb, primaryKey, real, text } from "drizzle-orm/pg-core";
+import { date, jsonb, primaryKey, real, smallint, text } from "drizzle-orm/pg-core";
 import { pgEnum, timestamp, varchar, bigint } from "drizzle-orm/pg-core"; 
 import { integer, pgTable, serial } from "drizzle-orm/pg-core";
 
@@ -7,6 +7,9 @@ export const users = pgTable("users", {
     id: serial("id").primaryKey(), 
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).unique(),
+    dateOfbirth: date("dateOfBirth"),
+    weight: real("weigth"),
+    height: real("height"),
     currentGoal: text("current_goal"),
     stravaId: bigint("strava_id", { mode: "number" }).unique().notNull(), 
     accessToken: varchar("access_token"),
