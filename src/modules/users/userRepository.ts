@@ -1,6 +1,7 @@
-import db from "../db/db";
-import { userRequest } from "../dto/UserDTOs";
-import { users } from "../db/schema";
+import db from "../../db/db";
+import { userRequest } from "../auth/authDto";
+import { users } from "../../db/schema";
+import { eq } from "drizzle-orm";
 
 
 const userRepository = {
@@ -37,8 +38,15 @@ const userRepository = {
         }).returning();
 
         return user;
+    },
 
-}
+    async getUserById(userId: number) {
+
+        const [user] = await db.select().from(users).where(eq(users.id, userId));
+
+        return user;
+
+    }
 }
 
 

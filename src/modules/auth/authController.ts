@@ -1,7 +1,7 @@
 import { Context } from "hono";
-import userService from "../services/userService";
+import userService from "./authService";
 
-const userController = {
+const authController = {
     async  exchangeTokenHandler(c: Context) {
 
         const code = c.req.query("code");
@@ -22,7 +22,8 @@ const userController = {
             return c.json({
                 message: "Autenticado com sucesso!",
                 userId: response.id,
-                strave_name: response.strava_name
+                strave_name: response.strava_name,
+                strava_id: response.strava_id
             }, 200);
         }catch (err) {
 
@@ -36,7 +37,5 @@ const userController = {
     }
 }
 
-
-
-export default userController;;
+export default authController;;
 

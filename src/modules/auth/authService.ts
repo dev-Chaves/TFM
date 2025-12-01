@@ -1,5 +1,5 @@
-import { userResponse } from "../dto/UserDTOs";
-import userRepository from "../repository/userRepository";
+import { userResponse } from "./authDto";
+import userRepository from "../users/userRepository";
 
 const userService = {
 
@@ -31,6 +31,7 @@ const userService = {
 
         return {
             id: user.id,
+            strava_id: user.stravaId ?? 0,
             strava_name: user.name
         };
 

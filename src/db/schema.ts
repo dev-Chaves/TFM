@@ -7,7 +7,7 @@ export const users = pgTable("users", {
     id: serial("id").primaryKey(), 
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).unique(),
-    stravaId: bigint("strava_id", { mode: "number" }).unique(), 
+    stravaId: bigint("strava_id", { mode: "number" }).unique().notNull(), 
     accessToken: varchar("access_token"),
     refreshToken: varchar("refresh_token"),
     expiresAt: timestamp("expires_at", { mode: "date" }),

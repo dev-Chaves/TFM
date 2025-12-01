@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import auth from './routes/auth';
+import auth from './modules/auth/auth';
+import activies from './modules/acitivies/activies';
 
 const app = new Hono()
 
@@ -11,6 +12,8 @@ app.get('/', (c) => {
 });
 
 app.route("/auth", auth);
+
+app.route("/activies", activies);
 
 export default {
   port: process.env.PORT,

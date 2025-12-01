@@ -11,5 +11,6 @@ export interface userRequest{
 
 export interface userResponse {
     id: number;
+    strava_id: number;
     strava_name: string;
 }
