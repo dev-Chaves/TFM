@@ -7,7 +7,8 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${DATABASE_URL}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_URL: ${DATABASE_URL}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_DB}
     volumes:

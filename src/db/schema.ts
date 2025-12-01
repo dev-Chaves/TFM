@@ -10,7 +10,7 @@ export const users = pgTable("users", {
     stravaId: bigint("strava_id", { mode: "number" }).unique(), 
     accessToken: varchar("access_token"),
     refreshToken: varchar("refresh_token"),
-    expiresAt: integer("expires_at"),
+    expiresAt: timestamp("expires_at", { mode: "date" }),
 
     // Guarda o perfil do atleta para a IA não alucinar
     profileConfig: jsonb("profile_config"),
