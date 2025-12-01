@@ -19,6 +19,11 @@ Create a `.env` at the project root (already included) with the following values
 DATABASE_URL=admin
 DATABASE_PASSWORD=admin
 DATABASE_DB=tfm_db
+PORT=3005
+CLIENT_ID=111111
+CLIENT_SECRET=JSDHAJKSHDJKASHDJKASHDJKASHJKB@#JKHUJKSAHDJKASHJLK
+API_KEY=HDASJKHDJAKSHDJKASHDJKASHDJKASHDJKASHDJKASHDJKASHJKDHAJK
+
 ```
 
 These values configure the Postgres service (user: admin, password: admin, database: tfm_db).

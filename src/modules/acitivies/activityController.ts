@@ -7,8 +7,6 @@ const activityController = {
 
         const id = Number(c.req.param('id'));
 
-        console.log(id);
-
         if(Number.isNaN(id)) return c.json({erro: `ID Inválido`}, 400);
 
         const error = c.req.query("error");
@@ -17,7 +15,7 @@ const activityController = {
 
         try {
 
-            const response = await activityService.getActivies(id);
+            const response = await activityService.syncActivies(id);
 
             return c.json(response);
 

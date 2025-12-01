@@ -1,8 +1,9 @@
 import userRepository from "../users/userRepository"
+import activityRepository from "./activityRepository";
 
 const activityService = {
 
-    async getActivies (userId: number) {
+    async syncActivies (userId: number) {
 
         const user = await userRepository.getUserById(userId);
 
@@ -19,11 +20,18 @@ const activityService = {
 
         if(!response.ok) throw new Error(`Error ao consultar atividades do atleta: ${response.statusText}`);
 
-        const activies = await response.json();
+        const data = await response.json()
 
-        return activies;
+        await activityRepository.saveActivies(user.id, data);
 
-    }
+        return {
+            message: `Sincronização realizada com sucesso`,
+            total_synced: data.length
+        };
+
+    },
+
+
 
 }
 
