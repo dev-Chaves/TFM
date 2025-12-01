@@ -7,7 +7,7 @@ export const users = pgTable("users", {
     id: serial("id").primaryKey(), 
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).unique(),
-    curretGoal: text("current_goal"),
+    currentGoal: text("current_goal"),
     stravaId: bigint("strava_id", { mode: "number" }).unique().notNull(), 
     accessToken: varchar("access_token"),
     refreshToken: varchar("refresh_token"),
