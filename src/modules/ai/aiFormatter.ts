@@ -6,6 +6,7 @@ interface CleanActivityForAI {
     tempo_movimento: string; // "34 min"
     pace_medio: string; // "6:41 min/km"
     elevacao: string; // "27m"
+    frequencia_cardiaca: string
 }
 
 
@@ -23,6 +24,9 @@ export function formatActivyForAI(raw: any): CleanActivityForAI {
     const distanceKm = (raw.distance / 1000).toFixed(2);
     const timeMin = Math.round(raw.moving_time / 60);
     const pace = calculatePace(raw.average_speed);
+    const heartRate = raw.average_heartrate 
+        ? `${Math.round(raw.average_heartrate)} bpm` 
+        : "N/A";
 
     return {
         data: date,
@@ -31,6 +35,7 @@ export function formatActivyForAI(raw: any): CleanActivityForAI {
         distancia_km: `${distanceKm} km`,
         tempo_movimento: `${timeMin} min`,
         pace_medio: `${pace} min/km`,
-        elevacao: `${raw.total_elevation_gain}m`
+        elevacao: `${raw.total_elevation_gain}m`,
+        frequencia_cardiaca: heartRate
     };
 }   
