@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import { date, jsonb, primaryKey, real, smallint, text } from "drizzle-orm/pg-core";
 import { pgEnum, timestamp, varchar, bigint } from "drizzle-orm/pg-core"; 
 import { integer, pgTable, serial } from "drizzle-orm/pg-core";
+import { GoalConfig } from "../modules/ai/aiDTO";
 
 export const users = pgTable("users", {
     id: serial("id").primaryKey(), 
@@ -10,7 +11,7 @@ export const users = pgTable("users", {
     dateOfbirth: date("dateOfBirth"),
     weight: real("weigth"),
     height: real("height"),
-    currentGoal: text("current_goal"),
+    currentGoal: jsonb("current_goal").$type<GoalConfig>(),
     stravaId: bigint("strava_id", { mode: "number" }).unique().notNull(), 
     accessToken: varchar("access_token"),
     refreshToken: varchar("refresh_token"),
