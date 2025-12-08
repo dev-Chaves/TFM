@@ -9,9 +9,7 @@ const aiController = {
             
             const response = await aiService.generateWorkoutPlan(Number(c.req.param('id')));
 
-            const plan = JSON.parse(response.choices[0].message.content || "{}");
-
-            return c.json(plan);
+            return c.json(response);
 
         }catch(err){
 

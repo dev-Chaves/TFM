@@ -2,6 +2,7 @@ import Groq from "groq-sdk";
 import userRepository from "../users/userRepository";
 import activityRepository from "../acitivies/activityRepository";
 import { formatActivyForAI } from "./aiFormatter";
+import workoutService from "../workouts/workoutService";
 
 const groq = new Groq({apiKey: process.env.GROQ_API_KEY});
 
@@ -75,8 +76,7 @@ const aiService = {
             }
         `;
 
-        
-        return groq.chat.completions.create({
+        const completion = await groq.chat.completions.create({
             messages: [
                 {role: "system", content: systemPrompt},
                 {role: "user", content: userPrompt}
@@ -84,6 +84,21 @@ const aiService = {
             model: "llama-3.3-70b-versatile",
             response_format: {type: "json_object"},
         });
+
+        const aiContent = completion.choices[0].message.content;
+
+        if(!aiContent) throw new Error("Resposta da IA inválida");
+
+        const plan = JSON.parse(aiContent);
+
+        await workoutService.saveWorkout(userId, plan);
+
+        return {
+            message: "Plano de treino gerado com sucesso.",
+            resumo: plan.resumo_semana,
+            objetivo: plan.objetivo,
+            treinos: plan.treinos
+        }
 
     },
 

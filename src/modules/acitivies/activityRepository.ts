@@ -2,7 +2,7 @@ import db from "../../db/db";
 import {activities} from "../../db/schema";
 import { eq, sql } from "drizzle-orm";
 
-const activityRepository = {
+const activityRepository = { 
 
     async saveActivies (userId: number, stravaActivies: any[]) {
 
