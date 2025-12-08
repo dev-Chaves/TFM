@@ -4,6 +4,6 @@ export interface GoalConfig {
     targetDate?: string; 
     weeklyFrequency: number;
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
-    text: string;
+    text?: string;
 
 }

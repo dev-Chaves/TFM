@@ -2,6 +2,7 @@ import db from "../../db/db";
 import { userRequest } from "../auth/authDto";
 import { users } from "../../db/schema";
 import { eq } from "drizzle-orm";
+import { GoalConfig } from "../ai/aiDTO";
 
 
 const userRepository = {
@@ -46,7 +47,16 @@ const userRepository = {
 
         return user;
 
+    },
+
+    async updateGoal(userId: number, goalData: GoalConfig){
+
+        return db.update(users).set({
+            currentGoal: goalData
+        }).where(eq(users.id, userId));
+
     }
+
 }
 
 
