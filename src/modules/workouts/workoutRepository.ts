@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import db from "../../db/db";
 import { workouts } from "../../db/schema";
 import { SaveWorkoutDTO } from "./workoutDTO";
@@ -46,6 +46,15 @@ const workoutRepository = {
     async getWorkoutByUserId(userId: number){
 
         return db.select().from(workouts).where(eq(workouts.userId, userId));
+
+    },
+
+    async getWorkoutNotCompletedByUserId(userId: number) {
+        
+        return db.select().from(workouts).where(and(
+            eq(workouts.userId, userId),
+            isNull(workouts.completedActivityId)
+        ));
 
     }
 

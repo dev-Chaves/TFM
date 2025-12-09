@@ -1,4 +1,5 @@
 import userRepository from "../users/userRepository"
+import workoutRepository from "../workouts/workoutRepository";
 import activityRepository from "./activityRepository";
 
 const activityService = {
@@ -20,9 +21,17 @@ const activityService = {
 
         if(!response.ok) throw new Error(`Error ao consultar atividades do atleta: ${response.statusText}`);
 
-        const data = await response.json()
+        const data = await response.json();
 
         await activityRepository.saveActivies(user.id, data);
+
+        const workoutsNotCompleted = await workoutRepository.getWorkoutByUserId(userId);
+
+        workouts.forEach(element => {
+            
+            if(element.id)
+
+        });
 
         return {
             message: `Sincronização realizada com sucesso`,
