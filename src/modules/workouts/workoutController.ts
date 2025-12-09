@@ -22,6 +22,18 @@ const workoutController = {
 
     },
 
+    async getWorkoutByUserId(c: Context){
+
+        const userId = Number(c.req.param());
+
+        if(Number.isNaN(userId)) return c.json({erro: `ID Inválido`}, 400);
+
+        const response = await workoutService.getWorkoutByUserId(userId);
+
+        return c.json(response);
+
+    }
+
 };
 
 export default workoutController;

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import db from "../../db/db";
 import { workouts } from "../../db/schema";
 import { SaveWorkoutDTO } from "./workoutDTO";
@@ -42,9 +43,10 @@ const workoutRepository = {
         return result;
     },
 
-    async completingWorkout(workoutId: number, aiFeedback?: string) {
+    async getWorkoutByUserId(userId: number){
 
-        
+        return db.select().from(workouts).where(eq(workouts.userId, userId));
+
     }
 
 };  

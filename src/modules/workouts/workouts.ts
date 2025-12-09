@@ -5,4 +5,6 @@ const workouts = new Hono();
 
 workouts.post("/", workoutController.saveWorkout);
 
+workouts.get("/", workoutController.getWorkoutByUserId);
+
 export default workouts;

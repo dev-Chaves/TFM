@@ -32,6 +32,14 @@ const workoutService = {
         });
 
         return await workoutRepository.saveMany(workoutsToSave);
+    },
+
+    async getWorkoutByUserId(userId: number) {
+
+        if(userId == null) throw new Error("ID Inválido");
+
+        return workoutRepository.getWorkoutByUserId(userId);
+
     }
 };
 
