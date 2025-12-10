@@ -6,7 +6,7 @@ const activityRepository = {
 
     async saveActivies (userId: number, stravaActivies: any[]) {
 
-        if (stravaActivies.length === 0) return;
+        if (stravaActivies.length === 0) return[];
 
         const valuesToInsert = stravaActivies.map(activity => ({
             userId: userId,
@@ -19,7 +19,7 @@ const activityRepository = {
             rawData: activity
         }));       
 
-        await db.insert(activities)
+        const saveActivies =  await db.insert(activities)
             .values(valuesToInsert)
             .onConflictDoUpdate({
                 target: activities.stravaActivityId,
@@ -30,9 +30,9 @@ const activityRepository = {
                     startDate: sql`excluded.start_date`,
                     rawData: sql`excluded.raw_data`
                 }
-            });
+            }).returning();
 
-        console.log(`Atividades processadas: ${valuesToInsert.length}`);
+            return saveActivies;
 
     },
 

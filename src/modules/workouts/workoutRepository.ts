@@ -56,7 +56,14 @@ const workoutRepository = {
             isNull(workouts.completedActivityId)
         ));
 
-    }
+    },
+
+    async linkActivityToWorkout(workoutId: number, activityId: number) {
+
+        return db.update(workouts).set({
+            completedActivityId: activityId
+        }).where(eq(workouts.id, workoutId));
+    },
 
 };  
 

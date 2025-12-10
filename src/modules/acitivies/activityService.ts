@@ -23,19 +23,34 @@ const activityService = {
 
         const data = await response.json();
 
-        await activityRepository.saveActivies(user.id, data);
+        const saveActivies = await activityRepository.saveActivies(user.id, data);
 
         const workoutsNotCompleted = await workoutRepository.getWorkoutByUserId(userId);
 
-        workouts.forEach(element => {
-            
-            if(element.id)
+        let matchesFound = 0;
 
-        });
+        for (const activity of saveActivies) {
+
+            const activityDate = activity.startDate ? new Date(activity.startDate).toISOString().split('T')[0] : null;
+
+            if(!activityDate) continue;
+
+            const match = workoutsNotCompleted.find(w => w.scheduleDate === activityDate);
+
+            if(match) {
+
+                await workoutRepository.linkActivityToWorkout(match.id, activity.id);
+                
+                matchesFound++;
+                
+            }
+
+        }
 
         return {
             message: `Sincronização realizada com sucesso`,
-            total_synced: data.length
+            total_synced: data.length,
+            new_activities_linked: matchesFound
         };
 
     },
