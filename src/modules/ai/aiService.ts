@@ -1,7 +1,7 @@
 import Groq from "groq-sdk";
 import userRepository from "../users/userRepository";
 import activityRepository from "../acitivies/activityRepository";
-import { formatActivyForAI } from "./aiFormatter";
+import { calculatePace, formatActivyForAI } from "./aiFormatter";
 import workoutService from "../workouts/workoutService";
 
 const groq = new Groq({apiKey: process.env.GROQ_API_KEY});
@@ -108,33 +108,35 @@ const aiService = {
 
         if(!user) throw new Error("Usuário não encontrado");
 
-        const systemPrompt = `
-            Você é um Treinador de Corrida analítico.
-            Compare o treino PLANEJADO com o REALIZADO.
-            
-            Responda EXCLUSIVAMENTE com este JSON:
-            {
-                "score": (nota de 0 a 10 baseada na aderência),
-                "status": "Cumpriu" | "Parcial" | "Não Cumpriu" | "Superou",
-                "comentario_coach": "Texto curto (max 30 palavras) falando diretamente com o atleta.",
-                "pontos_positivos": ["tag1", "tag2"],
-                "pontos_atencao": ["tag1", "tag2"]
-            }
-        `;
+        let splitsTexto = "Não disponível";
+        
+        if (actual.splits_metric && Array.isArray(actual.splits_metric)) {
+            splitsTexto = actual.splits_metric
+                .map((split: any, index: number) => {
+                    const pace = calculatePace(split.average_speed);
+                    return `Km ${index + 1}: ${pace}`;
+                })
+                .join(" | "); // Ex: "Km 1: 5:00 | Km 2: 4:55 | Km 3: 5:10"
+        }
+
+        const systemPrompt = `... (seu system prompt) ...`;
 
         const userPrompt = `
             PLANEJADO:
             - Tipo: ${planned.tipo}
-            - Meta: ${planned.distancia_km}km em ${planned.tempo_min}min
-            - Contexto: ${planned.contexto_semana || "N/A"}
+            - Meta: ${planned.distancia_km}km
+            - Descrição: ${planned.description || "N/A"}
 
             REALIZADO:
-            - Distância: ${(actual.distance / 1000).toFixed(2)} km
-            - Tempo: ${Math.round(actual.moving_time / 60)} min
-            - Pace Médio: ${actual.average_speed} (m/s)
-            - FC Média: ${actual.average_heartrate || "N/A"} bpm
-        `;
+            - Média Geral: ${calculatePace(actual.average_speed)} min/km
+            - Distância Total: ${(actual.distance / 1000).toFixed(2)} km
+            
+            PARCIAIS (SPLITS):
+            ${splitsTexto}
 
+            Analise se o atleta manteve o ritmo constante ou se houve quebra/tiros baseando-se nos parciais.
+        `;
+        
         try {
             const completion = await groq.chat.completions.create({
             messages: [
