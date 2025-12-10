@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import db from "../../db/db";
 import { workouts } from "../../db/schema";
 import { SaveWorkoutDTO } from "./workoutDTO";
@@ -64,6 +64,29 @@ const workoutRepository = {
             completedActivityId: activityId
         }).where(eq(workouts.id, workoutId));
     },
+
+    async getWorkoutById(workoutId: number) {
+        return db.select().from(workouts).where(eq(workouts.id, workoutId)).limit(1).then(res => res[0]);
+    },
+
+    async saveAiFeedback(workoutId: number, aiFeedback: any) {
+        return db.update(workouts).set({
+            aiFeedback: aiFeedback
+        }).where(eq(workouts.id, workoutId));
+    },
+
+    async getWorkoutsWithActivities(userId: number) {
+
+        return db.query.workouts.findMany({
+            where: eq(workouts.userId, userId),
+            orderBy: [desc(workouts.scheduleDate)],
+            with: {
+                activity: true
+            },
+            limit: 30
+        });
+
+    }
 
 };  
 

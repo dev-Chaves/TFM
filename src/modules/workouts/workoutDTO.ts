@@ -20,3 +20,29 @@ export interface SaveWorkoutDTO {
   completedActivityId?: number;
   aiFeedback?: string;
 }
+
+export interface DashboardItem {
+    id: number;
+    data: string; // YYYY-MM-DD
+    status: 'Pendente' | 'Concluido' | 'Perdido';
+    
+    titulo: string;
+    planeado: {
+        distancia: string;
+        tempo: string;
+        tipo: string;
+    };
+
+    realizado?: {
+        strava_id: number;
+        distancia: string;
+        pace: string;
+        tempo: string;
+    };
+
+    coach?: {
+        nota: number;
+        comentario: string;
+        tags: string[]; 
+    };
+}

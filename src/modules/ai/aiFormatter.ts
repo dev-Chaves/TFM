@@ -10,7 +10,7 @@ interface CleanActivityForAI {
 }
 
 
-function calculatePace(speedMetersPerSecond: number): string {
+export  function calculatePace(speedMetersPerSecond: number): string {
     if (speedMetersPerSecond === 0) return "0:00";
     const minutesPerKm = 16.666666666667 / speedMetersPerSecond;
     const minutes = Math.floor(minutesPerKm);

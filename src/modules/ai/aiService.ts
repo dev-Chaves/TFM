@@ -102,6 +102,62 @@ const aiService = {
 
     },
 
+    async generateWorkoutFeedback(userId: number, planned: any, actual: any) {
+
+        const user = await userRepository.getUserById(userId);
+
+        if(!user) throw new Error("Usuário não encontrado");
+
+        const systemPrompt = `
+            Você é um Treinador de Corrida analítico.
+            Compare o treino PLANEJADO com o REALIZADO.
+            
+            Responda EXCLUSIVAMENTE com este JSON:
+            {
+                "score": (nota de 0 a 10 baseada na aderência),
+                "status": "Cumpriu" | "Parcial" | "Não Cumpriu" | "Superou",
+                "comentario_coach": "Texto curto (max 30 palavras) falando diretamente com o atleta.",
+                "pontos_positivos": ["tag1", "tag2"],
+                "pontos_atencao": ["tag1", "tag2"]
+            }
+        `;
+
+        const userPrompt = `
+            PLANEJADO:
+            - Tipo: ${planned.tipo}
+            - Meta: ${planned.distancia_km}km em ${planned.tempo_min}min
+            - Contexto: ${planned.contexto_semana || "N/A"}
+
+            REALIZADO:
+            - Distância: ${(actual.distance / 1000).toFixed(2)} km
+            - Tempo: ${Math.round(actual.moving_time / 60)} min
+            - Pace Médio: ${actual.average_speed} (m/s)
+            - FC Média: ${actual.average_heartrate || "N/A"} bpm
+        `;
+
+        try {
+            const completion = await groq.chat.completions.create({
+            messages: [
+                {role: "system", content: systemPrompt},
+                {role: "user", content: userPrompt}
+            ],
+            model: "llama-3.3-70b-versatile",
+        });
+
+        const content = completion.choices[0].message.content;
+
+        if(!content) throw new Error("Resposta da IA inválida");
+
+        const aiFeedback = JSON.parse(content);
+
+        await workoutService.saveAiFeedback(planned.id, { feedbackText: aiFeedback });
+
+        } catch (error) {
+            console.error(`[IA Coach] Erro ao analisar treino ${planned.id}:`, error);
+        }
+
+    },
+
 };
 
 export default aiService;

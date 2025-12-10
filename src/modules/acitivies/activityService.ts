@@ -1,3 +1,4 @@
+import aiService from "../ai/aiService";
 import userRepository from "../users/userRepository"
 import workoutRepository from "../workouts/workoutRepository";
 import activityRepository from "./activityRepository";
@@ -42,7 +43,16 @@ const activityService = {
                 await workoutRepository.linkActivityToWorkout(match.id, activity.id);
                 
                 matchesFound++;
-                
+
+                // Sem o await ela funcionara de forma assíncrona, não bloqueando o fluxo principal e respeitando o tempo de resposta da API
+                // Fire-and-forget Pattern => fazemos que não esperamos o resultado dessa chamada para continuar
+                aiService.generateWorkoutFeedback(match.id, match.structure, activity.rawData)
+                .then(()=> {
+                    console.log(`Feedback da IA salvo para o treino ID: ${match.id}`);
+                }).catch((err) => {
+                    console.error(`Erro ao gerar feedback da IA para o treino ID: ${match.id} - ${err.message}`);
+                });
+
             }
 
         }

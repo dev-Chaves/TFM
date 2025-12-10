@@ -7,3 +7,11 @@ export interface GoalConfig {
     text?: string;
 
 }
+
+export interface FeedBackAI {
+    score: number; // 0 a 10
+    status: 'Cumpriu' | 'Parcial' | 'Não Cumpriu' | 'Superou';
+    comentario_coach: string;
+    pontos_positivos: string[];
+    pontos_atencao: string[];
+}

@@ -47,7 +47,7 @@ export const workouts = pgTable("workouts", {
 
     completedActivityId: integer("completed_activity_id").references(()=> activities.id),
 
-    aiFeedback: text("ai_feedback"),
+    aiFeedback: jsonb("ai_feedback"),
 
     createdAt: timestamp("created_at").defaultNow()
 });
