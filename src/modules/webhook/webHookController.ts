@@ -50,7 +50,7 @@ const webHookController = {
 
     async register(c: Context){
 
-        const url = c.req.url;
+        const url = c.req.query("url");
 
         if(!url) return c.json({error: "URL de callback não fornecida"}, 400);
 
