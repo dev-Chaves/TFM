@@ -7,6 +7,6 @@ webhook.get("/", webHookController.verifyWebHook);
 
 webhook.post("/", webHookController.handleEvent);
 
-webhook.post("/register", webHookController.register);
+webhook.get("/register", webHookController.register);
 
 export default webhook;
