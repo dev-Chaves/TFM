@@ -55,6 +55,13 @@ const userRepository = {
             currentGoal: goalData
         }).where(eq(users.id, userId));
 
+    },
+
+    async getUserByStravaId(stravaId: number) {
+        
+        const [user] = await db.select().from(users).where(eq(users.stravaId, stravaId));
+
+        return user;
     }
 
 }
