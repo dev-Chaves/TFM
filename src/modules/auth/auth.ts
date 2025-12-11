@@ -3,7 +3,9 @@ import userController from "./authController";
 
 const auth = new Hono();
 
-const redirectUrl: string = `http://localhost:${process.env.PORT}/auth/exchange_token`;
+const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT}`;
+
+const redirectUrl = `${baseUrl}/auth/exchange_token`;
 
 auth.get("/login", (c) => {
 
