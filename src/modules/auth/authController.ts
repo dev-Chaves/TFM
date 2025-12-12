@@ -10,9 +10,7 @@ const authController = {
         const error = c.req.query("error");
 
         if(error || !code ) {
-            return c.json({
-                error: "Usuário negou o acesso ou código inválido."
-            },400);
+            return c.redirect("https://gotfm.site/?error=auth_failed");
         }
 
         let tokenResponse: Response;
@@ -23,19 +21,11 @@ const authController = {
 
             activityService.syncActivies(response.id).catch((error) => console.error("Erro no Sync:", error));
 
-            return c.json({
-                message: "Autenticado com sucesso!",
-                userId: response.id,
-                strave_name: response.strava_name,
-                strava_id: response.strava_id
-            }, 200);
-        }catch (err) {
+            return c.redirect(`https://gotfm.site/dashboard?userId=${response.id}`);
 
+        } catch (err) {
             console.error(err);
-
-            return c.json({
-                error: "Erro interno no servidor."
-            },500);
+            return c.redirect("https://gotfm.site/?error=server_error");
         }
 
     }
