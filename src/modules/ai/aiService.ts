@@ -108,56 +108,74 @@ const aiService = {
 
         if(!user) throw new Error("Usuário não encontrado");
 
+        // 1. Formatar Splits
         let splitsTexto = "Não disponível";
-        
         if (actual.splits_metric && Array.isArray(actual.splits_metric)) {
             splitsTexto = actual.splits_metric
                 .map((split: any, index: number) => {
                     const pace = calculatePace(split.average_speed);
                     return `Km ${index + 1}: ${pace}`;
                 })
-                .join(" | "); // Ex: "Km 1: 5:00 | Km 2: 4:55 | Km 3: 5:10"
+                .join(" | "); 
         }
 
-        const systemPrompt = `... (seu system prompt) ...`;
+        const systemPrompt = `
+            Você é um Treinador de Corrida analítico e motivador.
+            Sua tarefa é comparar o treino PLANEJADO com o REALIZADO pelo atleta.
+            
+            REGRAS DE SAÍDA:
+            - Responda EXCLUSIVAMENTE em formato JSON válido.
+            - Não inclua texto antes ou depois do JSON.
+            
+            FORMATO DO JSON:
+            {
+                "score": (número de 0 a 10, onde 10 é execução perfeita),
+                "status": "Cumpriu" | "Parcial" | "Não Cumpriu" | "Superou",
+                "comentario_coach": "Texto curto, direto e motivador (máx 30 palavras) falando com o atleta ('você').",
+                "pontos_positivos": ["item 1", "item 2"],
+                "pontos_atencao": ["item 1", "item 2"]
+            }
+        `;
 
         const userPrompt = `
-            PLANEJADO:
+            TREINO PLANEJADO:
             - Tipo: ${planned.tipo}
             - Meta: ${planned.distancia_km}km
-            - Descrição: ${planned.description || "N/A"}
+            - Contexto: ${planned.description || "N/A"}
 
-            REALIZADO:
+            TREINO REALIZADO:
             - Média Geral: ${calculatePace(actual.average_speed)} min/km
             - Distância Total: ${(actual.distance / 1000).toFixed(2)} km
             
-            PARCIAIS (SPLITS):
+            PARCIAIS (SPLITS KM a KM):
             ${splitsTexto}
 
-            Analise se o atleta manteve o ritmo constante ou se houve quebra/tiros baseando-se nos parciais.
+            Analise a consistência do ritmo e a aderência ao plano.
         `;
         
         try {
             const completion = await groq.chat.completions.create({
-            messages: [
-                {role: "system", content: systemPrompt},
-                {role: "user", content: userPrompt}
-            ],
-            model: "llama-3.3-70b-versatile",
-        });
+                messages: [
+                    {role: "system", content: systemPrompt},
+                    {role: "user", content: userPrompt}
+                ],
+                model: "llama-3.3-70b-versatile",
+                response_format: { type: "json_object" }, // Importante: Força o JSON
+            });
 
-        const content = completion.choices[0].message.content;
+            const content = completion.choices[0].message.content;
 
-        if(!content) throw new Error("Resposta da IA inválida");
+            if(!content) throw new Error("Resposta da IA vazia");
 
-        const aiFeedback = JSON.parse(content);
+            const aiFeedback = JSON.parse(content);
 
-        await workoutService.saveAiFeedback(planned.id, { feedbackText: aiFeedback });
+            await workoutService.saveAiFeedback(planned.id, { feedbackText: aiFeedback });
+            
+            console.log(`[IA Coach] Feedback gerado com sucesso para o treino ${planned.id}`);
 
         } catch (error) {
             console.error(`[IA Coach] Erro ao analisar treino ${planned.id}:`, error);
         }
-
     },
 
 };
