@@ -5,7 +5,7 @@ const workoutController = {
 
     async saveWorkout(c: Context) {
 
-        const userId = Number(c.req.param('id'));
+        const userId = c.get("userId");
 
         if(Number.isNaN(userId)) return c.json({error: `ID Inválido`}, 400);
 

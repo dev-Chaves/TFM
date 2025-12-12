@@ -5,7 +5,7 @@ const activityController = {
 
     async getActivies(c: Context) {
 
-        const id = Number(c.req.param('id'));
+        const id = Number(c.get("userId"));
 
         if(Number.isNaN(id)) return c.json({erro: `ID Inválido`}, 400);
 

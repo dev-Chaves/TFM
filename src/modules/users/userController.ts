@@ -5,7 +5,7 @@ const userController = {
 
     async updateGoal(c: Context) {
 
-        const userId = Number(c.req.param('id'));
+        const userId = Number(c.get("userId"));
 
         if(Number.isNaN(userId)) return c.json({error: `ID Inválido`}, 400);
 

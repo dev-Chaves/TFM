@@ -1,6 +1,7 @@
 import { Context } from "hono";
 import userService from "./authService";
 import activityService from "../acitivies/activityService";
+import { sign } from "hono/jwt";
 
 const authController = {
     async  exchangeTokenHandler(c: Context) {
@@ -21,7 +22,15 @@ const authController = {
 
             activityService.syncActivies(response.id).catch((error) => console.error("Erro no Sync:", error));
 
-            return c.redirect(`https://gotfm.site/dashboard?userId=${response.id}`);
+            const payload = {
+                sub: response.id,
+                name: response.strava_name,
+                exp: Math.floor(Date.now() / 100) + 60 * 60 * 24 * 7,
+            };
+
+            const token = await sign(payload, process.env.JWT_SECRET!);
+
+            return c.redirect(`https://gotfm.site/dashboard?userId=${token}`);
 
         } catch (err) {
             console.error(err);
