@@ -1,8 +1,14 @@
-import {drizzle} from "drizzle-orm/bun-sql";
-import * as schema from "./schema"
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import * as schema from "./schema";
 
-const dbUrl: string = process.env.DATABASE_URL!;
+const connectionString = process.env.DATABASE_URL!;
 
-const db = drizzle(dbUrl, {schema});
+const client = postgres(connectionString, { 
+    prepare: false, 
+    ssl: "require"
+});
+
+const db = drizzle(client, { schema });
 
 export default db;
