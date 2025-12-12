@@ -30,7 +30,7 @@ const authController = {
 
             const token = await sign(payload, process.env.JWT_SECRET!);
 
-            return c.redirect(`https://gotfm.site/dashboard?userId=${token}`);
+            return c.redirect(`https://gotfm.site/dashboard?token=${token}`);
 
         } catch (err) {
             console.error(err);
