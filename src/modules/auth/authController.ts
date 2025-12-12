@@ -30,7 +30,9 @@ const authController = {
 
             const token = await sign(payload, process.env.JWT_SECRET!);
 
-            return c.redirect(`https://gotfm.site/dashboard?token=${token}`);
+            return c.redirect("/auth/callback?userId={userId}&firstLogin=true");
+
+            //redirect("/auth/callback?userId={userId}&firstLogin=true")
 
         } catch (err) {
             console.error(err);
