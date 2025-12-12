@@ -6,8 +6,10 @@ const aiController = {
     async generateWorkoutPlan(c: Context) {
 
         try{
+
+            const userId = c.get("userId");
             
-            const response = await aiService.generateWorkoutPlan(Number(c.req.param('id')));
+            const response = await aiService.generateWorkoutPlan(Number(userId));
 
             return c.json(response);
 
