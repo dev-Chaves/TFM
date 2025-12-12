@@ -1,4 +1,4 @@
-export interface userRequest{
+export interface authRequest{
     id: number;
     firstname: string;
     lastname: string;
@@ -9,8 +9,9 @@ export interface userRequest{
     weight?: number;
 }
 
-export interface userResponse {
+export interface authResponse {
     id: number;
     strava_id: number;
     strava_name: string;
+    first_login: string
 }

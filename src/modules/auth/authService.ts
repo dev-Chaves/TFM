@@ -1,9 +1,10 @@
-import { userResponse } from "./authDto";
+import { authResponse } from "./authDto";
 import userRepository from "../users/userRepository";
+import userService from "../users/userService";
 
-const userService = {
+const authService = {
 
-    async exchangeCodeForToken (code: string): Promise<userResponse> {
+    async exchangeCodeForToken (code: string): Promise<authResponse> {
 
     if(!code) throw new Error("Código inválido.");
 
@@ -29,10 +30,13 @@ const userService = {
 
         const user = await userRepository.saveUser(athlete, access_token, refresh_token, expires_at);
 
+        const isFirstLogin = user.firstLogin ? "true" : await userService.updateUserFirstLoginToFalse(user.id) ; 
+
         return {
             id: user.id,
             strava_id: user.stravaId ?? 0,
-            strava_name: user.name
+            strava_name: user.name,
+            first_login: isFirstLogin
         };
 
     }catch (err) {
@@ -47,4 +51,4 @@ const userService = {
 
 
 
-export default userService ;
+export default authService;

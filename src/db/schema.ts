@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { date, jsonb, primaryKey, real, smallint, text } from "drizzle-orm/pg-core";
+import { boolean, date, jsonb, primaryKey, real, smallint, text } from "drizzle-orm/pg-core";
 import { pgEnum, timestamp, varchar, bigint } from "drizzle-orm/pg-core"; 
 import { integer, pgTable, serial } from "drizzle-orm/pg-core";
 import { GoalConfig } from "../modules/ai/aiDTO";
@@ -19,6 +19,8 @@ export const users = pgTable("users", {
 
     // Guarda o perfil do atleta para a IA não alucinar
     profileConfig: jsonb("profile_config"),
+
+    firstLogin: boolean("first_login").default(true),
 
     createdAt: timestamp("created_at").defaultNow()
 });

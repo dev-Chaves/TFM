@@ -9,6 +9,12 @@ const userService = {
 
     },
 
+    async updateUserFirstLoginToFalse(userId: number): Promise<string> {
+        const user =  userRepository.updateUserFirstLoginToFalse(userId);
+
+        return "false";
+    }
+
 }
 
 export default userService;

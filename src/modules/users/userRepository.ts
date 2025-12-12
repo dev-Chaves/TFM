@@ -1,5 +1,5 @@
 import db from "../../db/db";
-import { userRequest } from "../auth/authDto";
+import { authRequest } from "../auth/authDto";
 import { users } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { GoalConfig } from "../ai/aiDTO";
@@ -7,7 +7,7 @@ import { GoalConfig } from "../ai/aiDTO";
 
 const userRepository = {
 
-    async saveUser (athlete: userRequest, access_token: string, refresh_token: string, expires_at: number) {
+    async saveUser (athlete: authRequest, access_token: string, refresh_token: string, expires_at: number) {
 
     const expiresAtDate = new Date(expires_at * 1000);
 
@@ -62,6 +62,12 @@ const userRepository = {
         const [user] = await db.select().from(users).where(eq(users.stravaId, stravaId));
 
         return user;
+    },
+
+    async updateUserFirstLoginToFalse(userId: number){
+        return db.update(users).set({
+            firstLogin: false
+        }).where(eq(users.id, userId));
     }
 
 }

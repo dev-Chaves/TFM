@@ -1,46 +1,40 @@
 import { Context } from "hono";
-import userService from "./authService";
 import activityService from "../acitivies/activityService";
 import { sign } from "hono/jwt";
+import authService from "./authService";
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://gotfm.site";
 
 const authController = {
-    async  exchangeTokenHandler(c: Context) {
+    async exchangeTokenHandler(c: Context) {
 
         const code = c.req.query("code");
-
         const error = c.req.query("error");
 
-        if(error || !code ) {
-            return c.redirect("https://gotfm.site/?error=auth_failed");
+        if (error || !code) {
+            return c.redirect(`${FRONTEND_URL}/?error=auth_failed`);
         }
 
-        let tokenResponse: Response;
-
-        try{
-            
-            const response = await userService.exchangeCodeForToken(code)
+        try {
+            const response = await authService.exchangeCodeForToken(code);
 
             activityService.syncActivies(response.id).catch((error) => console.error("Erro no Sync:", error));
 
             const payload = {
                 sub: response.id,
                 name: response.strava_name,
-                exp: Math.floor(Date.now() / 100) + 60 * 60 * 24 * 7,
+                exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // CORRIGIDO: era /100, deve ser /1000
             };
 
             const token = await sign(payload, process.env.JWT_SECRET!);
 
-            return c.redirect("/auth/callback?userId={userId}&firstLogin=true");
-
-            //redirect("/auth/callback?userId={userId}&firstLogin=true")
+            return c.redirect(`${FRONTEND_URL}/auth/callback?userId=${response.id}&firstLogin=${response.first_login}`);
 
         } catch (err) {
             console.error(err);
-            return c.redirect("https://gotfm.site/?error=server_error");
+            return c.redirect(`${FRONTEND_URL}/?error=server_error`);
         }
-
     }
 }
 
-export default authController;;
-
+export default authController;
