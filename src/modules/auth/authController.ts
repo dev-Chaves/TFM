@@ -28,7 +28,7 @@ const authController = {
 
             const token = await sign(payload, process.env.JWT_SECRET!);
 
-            return c.redirect(`${FRONTEND_URL}/dashboard?token=${token}`);
+            return c.redirect(`${FRONTEND_URL}/dashboard?token=${token}&fistLogin?=${response.first_login}`);
 
         } catch (err) {
             console.error(err);
