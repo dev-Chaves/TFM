@@ -10,7 +10,7 @@ type Env = {
 export const authMiddleware = createMiddleware<Env>(async (c, next) => {
   const authHeader = c.req.header("Authorization");
 
-  if (!authHeader || authHeader.startsWith("Bearer "))
+  if (!authHeader || !authHeader.startsWith("Bearer "))
     return c.json({ error: "Token não fonercido ou inválido" }, 401);
 
   const token = authHeader?.split(" ")[1];

@@ -10,7 +10,7 @@ import webhook from './modules/webhook/webhook';
 const app = new Hono();
 
 app.use("/*", cors({
-  origin: ["https://gotfm.site", "www.gotfm.site"],
+  origin: ["https://gotfm.site", "https://www.gotfm.site"],
   allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
   exposeHeaders: ["Content-Length"],

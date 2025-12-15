@@ -171,10 +171,10 @@ const aiService = {
 
             await workoutService.saveAiFeedback(workoutId, { feedbackText: aiFeedback });
             
-            console.log(`[IA Coach] Feedback gerado com sucesso para o treino ${planned.id}`);
+            console.log(`[IA Coach] Feedback gerado com sucesso para o treino ${workoutId}`);
 
         } catch (error) {
-            console.error(`[IA Coach] Erro ao analisar treino ${planned.id}:`, error);
+            console.error(`[IA Coach] Erro ao analisar treino ${workoutId}:`, error);
         }
     },
 
