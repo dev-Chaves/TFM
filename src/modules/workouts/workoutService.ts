@@ -54,7 +54,10 @@ const workoutService = {
         const rawWorkouts = await workoutRepository.getWorkoutsWithActivities(userId);
 
         return rawWorkouts.map(w => {
+
             const hoje = new Date().toString().split('T')[0];
+
+            const workoutDate = new Date(w.scheduleDate).toISOString().split("T");
 
             let status: DashboardItem['status'] = 'Pendente';
 
@@ -65,50 +68,46 @@ const workoutService = {
             const structure = w.structure as any; 
             const feedback = w.aiFeedback as any;
             const activity = w.activity; 
-            let paceFormatado = "0:00 min/km";
-            let distanciaRealizada = "0.00 km";
-            let tempoRealizado = "0 min";
-            let stravaId = 0;
+            
+            let paceRealizado = undefined;
+            let distanciaRealizada = undefined;
 
-        
             if (activity && activity.movingTime && activity.movingTime > 0) {
-
-                const dist = activity.distance ?? 0; 
-
-                const time = activity.movingTime;   
-
-                const velocidadeMetersPerSecond = dist / time;
-                paceFormatado = `${calculatePace(velocidadeMetersPerSecond)} min/km`;
+                const distKm = (activity.distance ?? 0) / 1000;
+                const timeMin = activity.movingTime / 60;   
                 
-                distanciaRealizada = `${(dist / 1000).toFixed(2)} km`;
-                tempoRealizado = `${Math.round(time / 60)} min`;
-                stravaId = Number(activity.stravaActivityId);
+                const velocidadeMetersPerSecond = (activity.distance ?? 0) / activity.movingTime;
+                paceRealizado = calculatePace(velocidadeMetersPerSecond);
+                
+                distanciaRealizada = Number(distKm.toFixed(2));
+            }
+
+            let pacePlanejado = "0:00";
+            if (structure?.distancia_km && structure?.tempo_min) {
+                const paceDecimal = structure.tempo_min / structure.distancia_km;
+                const min = Math.floor(paceDecimal);
+                const sec = Math.round((paceDecimal - min) * 60);
+                pacePlanejado = `${min}:${sec.toString().padStart(2, '0')}`;
             }
 
             return {
                 id: w.id,
-                data: w.scheduleDate,
+                data: w.scheduleDate, // O frontend espera string data ISO
                 status: status,
-                titulo: w.description,
                 
-                planeado: {
-                    distancia: `${structure?.distancia_km || 0} km`,
-                    tempo: `${structure?.tempo_min || 0} min`,
-                    tipo: structure?.tipo || "Geral"
-                },
-
+                // Mapeamento direto para as props do ActivityCard
+                tipo: structure?.tipo || "Treino",
+                distancia_planejada: Number(structure?.distancia_km || 0),
+                pace_planejado: pacePlanejado,
                 
-                realizado: activity ? {
-                    strava_id: stravaId,
-                    distancia: distanciaRealizada,
-                    tempo: tempoRealizado,
-                    pace: paceFormatado
-                } : undefined,
+                distancia_realizada: distanciaRealizada, 
+                pace_realizado: paceRealizado,           
 
                 coach: feedback ? {
-                    nota: feedback.score,
-                    comentario: feedback.comentario_coach,
-                    tags: [...(feedback.pontos_positivos || []), ...(feedback.pontos_atencao || [])]
+                    pontuacao: feedback.score || 0,
+                    comentario: feedback.comentario_coach || "",
+                    aspectos_positivos: feedback.pontos_positivos || [],
+                    areas_melhoria: feedback.pontos_atencao || []
                 } : undefined
             };
         });
