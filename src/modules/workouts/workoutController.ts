@@ -24,11 +24,11 @@ const workoutController = {
 
     async getWorkoutByUserId(c: Context){
 
-        const userId = Number(c.req.param());
+        const userId = c.get("userId");
 
         if(Number.isNaN(userId)) return c.json({erro: `ID Inválido`}, 400);
 
-        const response = await workoutService.getWorkoutByUserId(userId);
+        const response = await workoutService.getDashboardData(userId);
 
         return c.json(response);
 
