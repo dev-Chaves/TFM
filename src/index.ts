@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import auth from './modules/auth/auth';
 import activies from './modules/acitivies/activies';
 import ai from './modules/ai/ai';
@@ -6,7 +7,13 @@ import users from './modules/users/users';
 import workouts from './modules/workouts/workouts';
 import webhook from './modules/webhook/webhook';
 
-const app = new Hono()
+const app = new Hono();
+
+app.get("/", cors({
+  origin: ["https://gotfm.site", "https://api.gotfm.site"],
+  allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization"],
+}));
 
 app.get('/', (c) => {
 
