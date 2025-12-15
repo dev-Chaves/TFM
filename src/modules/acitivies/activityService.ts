@@ -46,7 +46,11 @@ const activityService = {
 
                 // Sem o await ela funcionara de forma assíncrona, não bloqueando o fluxo principal e respeitando o tempo de resposta da API
                 // Fire-and-forget Pattern => fazemos que não esperamos o resultado dessa chamada para continuar
-                aiService.generateWorkoutFeedback(match.id, match.structure, activity.rawData)
+                aiService.generateWorkoutFeedback(
+                    match.userId, 
+                    match.id,
+                    match.structure,
+                    activity.rawData)
                 .then(()=> {
                     console.log(`Feedback da IA salvo para o treino ID: ${match.id}`);
                 }).catch((err) => {

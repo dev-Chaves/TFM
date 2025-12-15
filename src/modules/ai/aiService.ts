@@ -102,7 +102,7 @@ const aiService = {
 
     },
 
-    async generateWorkoutFeedback(userId: number, planned: any, actual: any) {
+    async generateWorkoutFeedback(userId: number, workoutId: number, planned: any, actual: any) {
 
         const user = await userRepository.getUserById(userId);
 
@@ -169,7 +169,7 @@ const aiService = {
 
             const aiFeedback = JSON.parse(content);
 
-            await workoutService.saveAiFeedback(planned.id, { feedbackText: aiFeedback });
+            await workoutService.saveAiFeedback(workoutId, { feedbackText: aiFeedback });
             
             console.log(`[IA Coach] Feedback gerado com sucesso para o treino ${planned.id}`);
 
