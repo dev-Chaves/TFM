@@ -94,6 +94,7 @@ const workoutService = {
                 id: w.id,
                 data: w.scheduleDate, // O frontend espera string data ISO
                 status: status,
+                description: w.description,
                 
                 // Mapeamento direto para as props do ActivityCard
                 tipo: structure?.tipo || "Treino",

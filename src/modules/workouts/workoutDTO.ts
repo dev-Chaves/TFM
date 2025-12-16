@@ -25,6 +25,7 @@ export interface DashboardItem {
     id: number;
     data: string; // YYYY-MM-DD
     status: 'Pendente' | 'Concluido' | 'Perdido';
+    description: string;
     
     titulo: string;
     planeado: {
