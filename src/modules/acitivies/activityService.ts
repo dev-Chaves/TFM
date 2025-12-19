@@ -63,7 +63,6 @@ const activityService = {
 
         return {
             message: `Sincronização realizada com sucesso`,
-            total_synced: data.length,
             new_activities_linked: matchesFound
         };
 

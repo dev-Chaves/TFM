@@ -35,7 +35,6 @@ const aiService = {
             - Apenas corrida de rua (nada de esteira ou trilha, salvo se especificado).
             - Os treinos devem ser apenas em dias válidos || 1 dia após a chamada da API ou mais
             - Use o sistema métrico (km, min/km).
-            - Os treinos devem ter: Aquecimento, Parte Principal e Desaquecimento.
             - Tipos de treino permitidos: Rodagem (leve), Longo, Intervalado (Tiros), Tempo Run (Ritmo), Regenerativo.
             - Responda EXCLUSIVAMENTE em formato JSON.
         `;
