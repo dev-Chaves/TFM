@@ -61,6 +61,8 @@ const activityService = {
 
         }
 
+        console.log(`${user.id, data}`);
+
         return {
             message: `Sincronização realizada com sucesso`,
             new_activities_linked: matchesFound
