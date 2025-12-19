@@ -1,10 +1,26 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, gte } from "drizzle-orm";
 import db from "../../db/db";
 import { workouts } from "../../db/schema";
 import { SaveWorkoutDTO } from "./workoutDTO";
 
 
 const workoutRepository = {
+
+    // Deleta treinos pendentes (não concluídos) a partir de hoje
+    async deletePendingWorkouts(userId: number) {
+        const today = new Date().toISOString().split('T')[0];
+        
+        const deleted = await db.delete(workouts)
+            .where(and(
+                eq(workouts.userId, userId),
+                isNull(workouts.completedActivityId), // Não foi feito
+                gte(workouts.scheduleDate, today)     // Data >= hoje
+            ))
+            .returning();
+        
+        console.log(`[deletePendingWorkouts] Deletados ${deleted.length} treinos pendentes do userId ${userId}`);
+        return deleted;
+    },
 
     async saveWorkout(userId: number, workoutData: SaveWorkoutDTO) {
 

@@ -39,6 +39,9 @@ const workoutService = {
             throw new Error("Plano de treino inválido: Nenhum treino encontrado.");
         };
 
+        // LIMPAR TREINOS PENDENTES ANTIGOS - evita duplicação
+        await workoutRepository.deletePendingWorkouts(userId);
+
         // Buscar dias disponíveis e weeklyFrequency do usuário
         const user = await userRepository.getUserById(userId);
         const availableDays = user?.currentGoal?.availableDays;
@@ -47,10 +50,7 @@ const workoutService = {
         // VALIDAÇÃO: Limitar quantidade de treinos ao weeklyFrequency
         const treinosParaSalvar = aiPlan.treinos.slice(0, weeklyFrequency);
         
-        console.log(`[saveWorkout] userId: ${userId}`);
-        console.log(`[saveWorkout] weeklyFrequency: ${weeklyFrequency}`);
-        console.log(`[saveWorkout] availableDays: ${JSON.stringify(availableDays)}`);
-        console.log(`[saveWorkout] treinos recebidos: ${aiPlan.treinos.length}, salvando: ${treinosParaSalvar.length}`);
+        console.log(`[saveWorkout] userId: ${userId}, weeklyFrequency: ${weeklyFrequency}, salvando: ${treinosParaSalvar.length} treinos`);
         
         let scheduleDates: Date[];
         
