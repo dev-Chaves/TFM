@@ -1,0 +1,282 @@
+{
+    "task": "Atualizar Frontend TFM - Dias Disponíveis e Cards Detalhados",
+    "description": "Atualizar o frontend para suportar a nova estrutura de treinos com dias disponíveis para treinar e cards detalhados com fases.",
+    "changes_required": [
+        {
+            "component": "GoalModal",
+            "file": "GoalModal.tsx ou equivalente",
+            "changes": [
+                {
+                    "type": "ADD_FIELD",
+                    "field": "availableDays",
+                    "description": "Adicionar seletor de dias da semana disponíveis para treinar",
+                    "ui_component": "Checkbox group ou Toggle buttons",
+                    "options": [
+                        {
+                            "value": 0,
+                            "label": "Dom"
+                        },
+                        {
+                            "value": 1,
+                            "label": "Seg"
+                        },
+                        {
+                            "value": 2,
+                            "label": "Ter"
+                        },
+                        {
+                            "value": 3,
+                            "label": "Qua"
+                        },
+                        {
+                            "value": 4,
+                            "label": "Qui"
+                        },
+                        {
+                            "value": 5,
+                            "label": "Sex"
+                        },
+                        {
+                            "value": 6,
+                            "label": "Sáb"
+                        }
+                    ],
+                    "validation": "Deve selecionar pelo menos X dias (onde X = weeklyFrequency)",
+                    "default_value": []
+                }
+            ],
+            "payload_example": {
+                "targetDistanceKm": 5,
+                "weeklyFrequency": 3,
+                "experienceLevel": "intermediate",
+                "text": "Correr 5K abaixo de 23 minutos",
+                "availableDays": [
+                    1,
+                    3,
+                    5
+                ]
+            }
+        },
+        {
+            "component": "WorkoutCard",
+            "file": "ActivityCard.tsx ou WorkoutCard.tsx",
+            "changes": [
+                {
+                    "type": "UPDATE_INTERFACE",
+                    "new_fields": {
+                        "titulo": "string - Nome visual do treino (ex: '🔥 Tiros de Velocidade 400m')",
+                        "objetivo_sessao": "string - O que o treino desenvolve",
+                        "tempo_estimado_min": "number - Tempo estimado em minutos",
+                        "fases": {
+                            "aquecimento": {
+                                "duracao_min": "number",
+                                "descricao": "string",
+                                "pace_sugerido": "string (ex: '7:00-7:30 min/km')",
+                                "intensidade": "string (ex: 'Leve')"
+                            },
+                            "principal": {
+                                "tipo_estrutura": "'continuo' | 'intervalado' | 'progressivo' | 'fartlek'",
+                                "descricao_geral": "string",
+                                "pace_alvo": "string (opcional, para contínuos)",
+                                "zona_fc": "number 1-5 (opcional)",
+                                "series": [
+                                    {
+                                        "repeticoes": "number",
+                                        "distancia_m": "number",
+                                        "pace_alvo": "string",
+                                        "descanso_tipo": "'parado' | 'trote' | 'caminhada'",
+                                        "descanso_duracao": "string"
+                                    }
+                                ],
+                                "como_executar": [
+                                    "string - Passo 1",
+                                    "string - Passo 2"
+                                ]
+                            },
+                            "desaquecimento": {
+                                "duracao_min": "number",
+                                "descricao": "string",
+                                "pace_sugerido": "string",
+                                "intensidade": "string"
+                            }
+                        },
+                        "dicas_execucao": [
+                            "string"
+                        ],
+                        "sensacao_esperada": "string",
+                        "contexto_semana": "string",
+                        "mensagem_coach": "string",
+                        "foco_semana": [
+                            "string"
+                        ]
+                    }
+                },
+                {
+                    "type": "UPDATE_UI",
+                    "sections": [
+                        {
+                            "name": "Header",
+                            "content": "Data formatada + Badge de status (Pendente/Concluido/Perdido)"
+                        },
+                        {
+                            "name": "Title",
+                            "content": "Usar 'titulo' ao invés de 'tipo' como título principal",
+                            "subtitle": "objetivo_sessao"
+                        },
+                        {
+                            "name": "QuickStats",
+                            "layout": "horizontal pills/badges",
+                            "items": [
+                                "distancia_planejada + 'km'",
+                                "tempo_estimado_min + 'min'",
+                                "zona FC (se existir)"
+                            ]
+                        },
+                        {
+                            "name": "PhasesTimeline",
+                            "layout": "vertical timeline com 3 fases",
+                            "phases": [
+                                {
+                                    "icon": "🌡️",
+                                    "title": "Aquecimento",
+                                    "color": "blue",
+                                    "source": "fases.aquecimento"
+                                },
+                                {
+                                    "icon": "🎯",
+                                    "title": "Principal",
+                                    "color": "orange",
+                                    "source": "fases.principal",
+                                    "highlight": true
+                                },
+                                {
+                                    "icon": "❄️",
+                                    "title": "Desaquecimento",
+                                    "color": "green",
+                                    "source": "fases.desaquecimento"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SeriesCard",
+                            "condition": "fases.principal.tipo_estrutura === 'intervalado'",
+                            "layout": "Card destacado com gradiente",
+                            "content": "{series.repeticoes}x {series.distancia_m}m @ {series.pace_alvo}",
+                            "subtitle": "Descanso: {series.descanso_duracao} ({series.descanso_tipo})"
+                        },
+                        {
+                            "name": "HowToExecute",
+                            "collapsible": true,
+                            "default_state": "collapsed",
+                            "icon": "📋",
+                            "title": "Como Executar",
+                            "content": "Lista ordenada de fases.principal.como_executar"
+                        },
+                        {
+                            "name": "CoachTips",
+                            "layout": "horizontal scrollable chips",
+                            "icon": "💡",
+                            "source": "dicas_execucao"
+                        },
+                        {
+                            "name": "ExpectedFeeling",
+                            "layout": "callout box with subtle background",
+                            "icon": "🧠",
+                            "source": "sensacao_esperada",
+                            "style": "italic"
+                        },
+                        {
+                            "name": "CoachMessage",
+                            "condition": "mensagem_coach exists and not empty",
+                            "layout": "message bubble",
+                            "icon": "🤖",
+                            "source": "mensagem_coach"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "api_response_example": {
+        "id": 50,
+        "data": "2025-12-20",
+        "status": "Pendente",
+        "description": "Aquecimento 10min + 5x400m (4:30) c/ 90s trote + Desaquecimento 10min",
+        "tipo": "Intervalado",
+        "titulo": "🔥 Tiros de Velocidade 400m",
+        "objetivo_sessao": "Desenvolver velocidade e economia de corrida",
+        "distancia_planejada": 6,
+        "tempo_estimado_min": 45,
+        "pace_planejado": "7:30",
+        "fases": {
+            "aquecimento": {
+                "duracao_min": 10,
+                "descricao": "Trote leve para ativar o corpo",
+                "pace_sugerido": "7:00-7:30 min/km",
+                "intensidade": "Leve"
+            },
+            "principal": {
+                "tipo_estrutura": "intervalado",
+                "descricao_geral": "5 repetições de 400m em ritmo forte",
+                "series": [
+                    {
+                        "repeticoes": 5,
+                        "distancia_m": 400,
+                        "pace_alvo": "4:30 min/km",
+                        "descanso_tipo": "trote",
+                        "descanso_duracao": "90 segundos"
+                    }
+                ],
+                "como_executar": [
+                    "1️⃣ Posicione-se em local plano (pista ou calçada reta)",
+                    "2️⃣ Nos 400m, acelere progressivamente nos primeiros 100m",
+                    "3️⃣ Mantenha o ritmo constante no meio do tiro",
+                    "4️⃣ Nos últimos 100m, mantenha a forma mesmo cansado",
+                    "5️⃣ Recupere com trote leve entre as séries, não pare"
+                ]
+            },
+            "desaquecimento": {
+                "duracao_min": 10,
+                "descricao": "Trote muito leve + alongamento dinâmico",
+                "pace_sugerido": "8:00+ min/km",
+                "intensidade": "Muito Leve"
+            }
+        },
+        "dicas_execucao": [
+            "Hidrate-se bem antes do treino",
+            "Use tênis com boa resposta para os tiros",
+            "Se sentir dor, interrompa imediatamente"
+        ],
+        "sensacao_esperada": "Você deve terminar ofegante nos tiros, mas recuperar durante o trote. Se não conseguir recuperar, reduza o pace.",
+        "contexto_semana": "Semana focada em desenvolver velocidade.",
+        "mensagem_coach": "Joao, você vem mostrando consistência! Hoje é dia de colocar velocidade nas pernas. 💪",
+        "foco_semana": [
+            "Velocidade",
+            "Explosão"
+        ],
+        "distancia_realizada": null,
+        "pace_realizado": null,
+        "coach": null
+    },
+    "styling_suggestions": {
+        "colors": {
+            "aquecimento": "#3B82F6",
+            "principal": "#F59E0B",
+            "desaquecimento": "#10B981",
+            "series_card_gradient": "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+            "coach_message_bg": "rgba(139, 92, 246, 0.1)"
+        },
+        "card_structure": {
+            "expandable": true,
+            "default_collapsed_sections": [
+                "como_executar"
+            ],
+            "always_visible": [
+                "titulo",
+                "quick_stats",
+                "fases_resumo"
+            ]
+        }
+    },
+    "typescript_interface": "interface WorkoutData {\n  id: number;\n  data: string;\n  status: 'Pendente' | 'Concluido' | 'Perdido';\n  description: string;\n  tipo: string;\n  titulo: string;\n  objetivo_sessao: string;\n  distancia_planejada: number;\n  tempo_estimado_min: number;\n  pace_planejado: string;\n  fases: {\n    aquecimento: FaseTreino;\n    principal: FasePrincipal;\n    desaquecimento: FaseTreino;\n  } | null;\n  dicas_execucao: string[];\n  sensacao_esperada: string;\n  contexto_semana: string;\n  mensagem_coach: string;\n  foco_semana: string[];\n  distancia_realizada?: number;\n  pace_realizado?: string;\n  coach?: CoachFeedback;\n}\n\ninterface FaseTreino {\n  duracao_min: number;\n  descricao: string;\n  pace_sugerido?: string;\n  intensidade?: string;\n}\n\ninterface FasePrincipal extends FaseTreino {\n  tipo_estrutura: 'continuo' | 'intervalado' | 'progressivo' | 'fartlek';\n  descricao_geral: string;\n  pace_alvo?: string;\n  zona_fc?: number;\n  series?: SerieIntervalo[];\n  como_executar: string[];\n}\n\ninterface SerieIntervalo {\n  repeticoes: number;\n  distancia_m: number;\n  pace_alvo: string;\n  descanso_tipo: 'parado' | 'trote' | 'caminhada';\n  descanso_duracao: string;\n}"
+}

@@ -39,29 +39,40 @@ const workoutService = {
             throw new Error("Plano de treino inválido: Nenhum treino encontrado.");
         };
 
-        // Buscar dias disponíveis do usuário
+        // Buscar dias disponíveis e weeklyFrequency do usuário
         const user = await userRepository.getUserById(userId);
         const availableDays = user?.currentGoal?.availableDays;
+        const weeklyFrequency = user?.currentGoal?.weeklyFrequency || aiPlan.treinos.length;
+        
+        // VALIDAÇÃO: Limitar quantidade de treinos ao weeklyFrequency
+        const treinosParaSalvar = aiPlan.treinos.slice(0, weeklyFrequency);
+        
+        console.log(`[saveWorkout] userId: ${userId}`);
+        console.log(`[saveWorkout] weeklyFrequency: ${weeklyFrequency}`);
+        console.log(`[saveWorkout] availableDays: ${JSON.stringify(availableDays)}`);
+        console.log(`[saveWorkout] treinos recebidos: ${aiPlan.treinos.length}, salvando: ${treinosParaSalvar.length}`);
         
         let scheduleDates: Date[];
         
         if (availableDays && availableDays.length > 0) {
             // Usa os dias disponíveis do usuário
-            scheduleDates = getNextAvailableDates(availableDays, aiPlan.treinos.length);
+            scheduleDates = getNextAvailableDates(availableDays, treinosParaSalvar.length);
+            console.log(`[saveWorkout] Datas calculadas: ${scheduleDates.map(d => d.toISOString().split('T')[0]).join(', ')}`);
         } else {
             // Fallback: dias consecutivos começando amanhã
             const startDate = new Date();
             startDate.setDate(startDate.getDate() + 1);
             startDate.setHours(0, 0, 0, 0);
             
-            scheduleDates = aiPlan.treinos.map((_, index) => {
+            scheduleDates = treinosParaSalvar.map((_, index) => {
                 const date = new Date(startDate);
                 date.setDate(startDate.getDate() + index);
                 return date;
             });
+            console.log(`[saveWorkout] Fallback - Datas consecutivas: ${scheduleDates.map(d => d.toISOString().split('T')[0]).join(', ')}`);
         }
 
-        const workoutsToSave: SaveWorkoutDTO[] = aiPlan.treinos.map((treino, index) => {
+        const workoutsToSave: SaveWorkoutDTO[] = treinosParaSalvar.map((treino, index) => {
             return {
                 userId: userId,
                 scheduleDate: scheduleDates[index],
