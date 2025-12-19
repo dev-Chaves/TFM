@@ -11,12 +11,10 @@ const activityService = {
 
         if(!user) throw new Error("Usuário não encontrado");
 
-        // Busca a última atividade sincronizada para evitar duplicatas
         const lastActivity = await activityRepository.getLastActivityByUserId(userId);
         
         let afterParam = "";
         if (lastActivity?.startDate) {
-            // Strava usa timestamp Unix em segundos
             const timestamp = Math.floor(new Date(lastActivity.startDate).getTime() / 1000);
             afterParam = `&after=${timestamp}`;
         }
