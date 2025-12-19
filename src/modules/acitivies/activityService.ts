@@ -11,7 +11,17 @@ const activityService = {
 
         if(!user) throw new Error("Usuário não encontrado");
 
-        const url: string = `https://www.strava.com/api/v3/athlete/activities?per_page=15`;
+        // Busca a última atividade sincronizada para evitar duplicatas
+        const lastActivity = await activityRepository.getLastActivityByUserId(userId);
+        
+        let afterParam = "";
+        if (lastActivity?.startDate) {
+            // Strava usa timestamp Unix em segundos
+            const timestamp = Math.floor(new Date(lastActivity.startDate).getTime() / 1000);
+            afterParam = `&after=${timestamp}`;
+        }
+
+        const url: string = `https://www.strava.com/api/v3/athlete/activities?per_page=30${afterParam}`;
 
         const response = await fetch(url, {
             method: "GET",
@@ -61,7 +71,7 @@ const activityService = {
 
         }
 
-        console.log(`${user.id, data}`);
+        console.log("User ID:", user.id, "Novas atividades:", data.length);
 
         return {
             message: `Sincronização realizada com sucesso`,

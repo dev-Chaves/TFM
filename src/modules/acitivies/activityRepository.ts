@@ -42,6 +42,14 @@ const activityRepository = {
             orderBy: (activities, {desc}) => [desc(activities.startDate)],
             limit: limit
         })
+    },
+
+    async getLastActivityByUserId(userId: number) {
+        const result = await db.query.activities.findFirst({
+            where: eq(activities.userId, userId),
+            orderBy: (activities, {desc}) => [desc(activities.startDate)]
+        });
+        return result;
     }
 
 }
