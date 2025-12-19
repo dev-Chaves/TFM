@@ -1,6 +1,35 @@
 import { calculatePace } from "../ai/aiFormatter";
 import { DashboardItem, PlanoSemanalAI, SaveWorkoutDTO } from "./workoutDTO";
 import workoutRepository from "./workoutRepository";
+import userRepository from "../users/userRepository";
+import { DayOfWeek } from "../ai/aiDTO";
+
+// Função auxiliar para encontrar as próximas datas disponíveis
+function getNextAvailableDates(availableDays: DayOfWeek[], count: number): Date[] {
+    const dates: Date[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let currentDate = new Date(today);
+    currentDate.setDate(currentDate.getDate() + 1); // Começa amanhã
+    
+    while (dates.length < count) {
+        const dayOfWeek = currentDate.getDay() as DayOfWeek;
+        
+        if (availableDays.includes(dayOfWeek)) {
+            dates.push(new Date(currentDate));
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+        
+        // Segurança: máximo 30 dias no futuro
+        if (dates.length === 0 && currentDate.getTime() - today.getTime() > 30 * 24 * 60 * 60 * 1000) {
+            throw new Error("Não foi possível encontrar dias disponíveis nos próximos 30 dias");
+        }
+    }
+    
+    return dates;
+}
 
 const workoutService = {
 
@@ -10,33 +39,42 @@ const workoutService = {
             throw new Error("Plano de treino inválido: Nenhum treino encontrado.");
         };
 
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() + 1);
-        startDate.setHours(0, 0, 0, 0);
+        // Buscar dias disponíveis do usuário
+        const user = await userRepository.getUserById(userId);
+        const availableDays = user?.currentGoal?.availableDays;
+        
+        let scheduleDates: Date[];
+        
+        if (availableDays && availableDays.length > 0) {
+            // Usa os dias disponíveis do usuário
+            scheduleDates = getNextAvailableDates(availableDays, aiPlan.treinos.length);
+        } else {
+            // Fallback: dias consecutivos começando amanhã
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() + 1);
+            startDate.setHours(0, 0, 0, 0);
+            
+            scheduleDates = aiPlan.treinos.map((_, index) => {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + index);
+                return date;
+            });
+        }
 
         const workoutsToSave: SaveWorkoutDTO[] = aiPlan.treinos.map((treino, index) => {
-            
-            const workoutDate = new Date(startDate);
-            workoutDate.setDate(startDate.getDate() + index);
-
             return {
                 userId: userId,
-                scheduleDate: workoutDate,
+                scheduleDate: scheduleDates[index],
                 description: treino.descricao_completa,
                 structure: {
-                    // Campos básicos
                     tipo: treino.tipo,
                     titulo: treino.titulo,
                     objetivo_sessao: treino.objetivo_sessao,
                     distancia_km: treino.distancia_total_km,
                     tempo_min: treino.tempo_estimado_min,
-                    
-                    // Nova estrutura detalhada
                     fases: treino.fases,
                     dicas_execucao: treino.dicas_execucao,
                     sensacao_esperada: treino.sensacao_esperada,
-                    
-                    // Contexto do plano
                     contexto_semana: aiPlan.resumo_semana,
                     mensagem_coach: aiPlan.mensagem_coach,
                     foco_semana: aiPlan.foco_semana

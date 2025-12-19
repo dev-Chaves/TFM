@@ -69,7 +69,8 @@ Nível: ${goal.experienceLevel === "beginner" ? "Iniciante" : goal.experienceLev
 Meta: ${goal.text || `Correr ${goal.targetDistanceKm}km`}
 Distância Alvo: ${goal.targetDistanceKm}km
 Data da Prova: ${goal.targetDate || "Não definida (treino contínuo)"}
-Dias Disponíveis: ${goal.weeklyFrequency} treinos/semana
+Treinos por Semana: ${goal.weeklyFrequency}
+Dias Disponíveis: ${goal.availableDays ? goal.availableDays.map((d: number) => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d]).join(', ') : "Qualquer dia"}
 
 ════════════════════════════════════════
 📈 HISTÓRICO RECENTE (Últimos treinos)
