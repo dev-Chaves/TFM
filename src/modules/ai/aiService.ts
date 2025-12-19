@@ -28,53 +28,127 @@ const aiService = {
         }
 
         const systemPrompt = `
-            Você é um Treinador de Corrida de Rua de Elite (Running Coach).
-            Sua metodologia é baseada em periodização segura, evitando lesões e focando em consistência.
-            
-            DIRETRIZES:
-            - Apenas corrida de rua (nada de esteira ou trilha, salvo se especificado).
-            - Os treinos devem ser apenas em dias válidos || 1 dia após a chamada da API ou mais
-            - Use o sistema métrico (km, min/km).
-            - Tipos de treino permitidos: Rodagem (leve), Longo, Intervalado (Tiros), Tempo Run (Ritmo), Regenerativo.
-            - Responda EXCLUSIVAMENTE em formato JSON.
-        `;
+Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de experiência.
+
+🏃 FILOSOFIA DE TREINO:
+- Periodização inteligente: alternância de estímulos para evolução constante
+- Regra dos 10%: nunca aumentar volume semanal mais que 10%
+- 80/20: 80% em baixa intensidade, 20% em alta intensidade
+- Recuperação é parte do treino: dias leves são tão importantes quanto os fortes
+
+📋 TIPOS DE TREINO (use apenas estes):
+1. RODAGEM: Corrida contínua em ritmo confortável (conversa possível)
+2. LONGO: Treino de resistência, maior volume da semana
+3. INTERVALADO: Tiros curtos/médios com recuperação (desenvolve velocidade)
+4. TEMPO RUN: Corrida no limiar anaeróbico (ritmo "desconfortavelmente confortável")
+5. REGENERATIVO: Recuperação ativa, ritmo muito leve
+6. FARTLEK: Variações de ritmo livres durante a corrida
+
+⚠️ REGRAS OBRIGATÓRIAS:
+- Sistema métrico (km, min/km)
+- Paces REALISTAS baseados no histórico do atleta
+- Cada treino DEVE ter: aquecimento, parte principal e desaquecimento
+- Intervalados SEMPRE especificam: repetições, distância, pace, tipo de descanso
+- Tom motivador e pessoal (use "você", seja encorajador)
+- Responda EXCLUSIVAMENTE em formato JSON válido
+`;
 
         const userPrompt = `
-            Crie um plano de treino semanal para este atleta:
+🎯 MISSÃO: Crie um plano de treino semanal personalizado para este atleta.
 
-            PERFIL DO ATLETA:
-            - Nome: ${user.name}
-            - Idade: Calcular baseado em ${user.dateOfbirth} (ou assuma 30 se nulo)
-            - Peso: ${user.weight}kg
-            - Nível: ${goal.experienceLevel}
-            
-            OBJETIVO ATUAL:
-            - Meta Principal: ${goal.targetDistanceKm}km
-            - Frequência Semanal: ${goal.weeklyFrequency} dias de treino
-            - Data da Prova/Meta: ${goal.targetDate || "Não definida"}
-            - Nota Adicional: "${goal.text}"
+════════════════════════════════════════
+📊 PERFIL DO ATLETA
+════════════════════════════════════════
+Nome: ${user.name || "Atleta"}
+Peso: ${user.weight ? user.weight + "kg" : "Não informado"}
+Nível: ${goal.experienceLevel === "beginner" ? "Iniciante" : goal.experienceLevel === "intermediate" ? "Intermediário" : "Avançado"}
 
-            HISTÓRICO RECENTE (Últimos treinos realizados):
-            ${historyContext}
+════════════════════════════════════════
+🎯 OBJETIVO ATUAL
+════════════════════════════════════════
+Meta: ${goal.text || `Correr ${goal.targetDistanceKm}km`}
+Distância Alvo: ${goal.targetDistanceKm}km
+Data da Prova: ${goal.targetDate || "Não definida (treino contínuo)"}
+Dias Disponíveis: ${goal.weeklyFrequency} treinos/semana
 
-            Com base no histórico (especialmente o Pace Médio recente), estipule ritmos realistas para os treinos sugeridos.
-            
-            SAÍDA ESPERADA (JSON):
-            {
-                "resumo_semana": "Texto motivacional curto explicando o foco da semana",
-                "objetivo": "Descrição miníma do objetivo do usuário mais explicação do porquê",
-                "treinos": [
-                    {
-                        "dia": 1,
-                        "tipo": "Intervalado",
-                        "descricao_completa": "Aquecimento 10min trote + 5x 400m forte (pace X) com 1min descanso + 10min desaquecimento",
-                        "distancia_estimada_km": 6,
-                        "tempo_estimado_min": 40
-                    }
-                    // ... repetir para os dias de treino (total ${goal.weeklyFrequency})
-                ]
-            }
-        `;
+════════════════════════════════════════
+📈 HISTÓRICO RECENTE (Últimos treinos)
+════════════════════════════════════════
+${historyContext || "Sem histórico disponível - atleta novo, seja conservador nos paces"}
+
+════════════════════════════════════════
+📝 INSTRUÇÕES DE GERAÇÃO
+════════════════════════════════════════
+1. Analise o pace médio recente para definir paces realistas
+2. Distribua os ${goal.weeklyFrequency} treinos ao longo da semana (dias 1 a 7)
+3. Varie os tipos de treino para desenvolvimento completo
+4. Para INTERVALADOS, detalhe cada série com precisão
+5. Inclua dicas práticas de execução
+
+════════════════════════════════════════
+📤 FORMATO DE SAÍDA (JSON EXATO)
+════════════════════════════════════════
+{
+    "resumo_semana": "Texto curto explicando o foco da semana (2-3 frases)",
+    "objetivo": "Meta do atleta reescrita de forma motivadora",
+    "mensagem_coach": "Mensagem pessoal e motivadora para o atleta (use o nome se disponível)",
+    "foco_semana": ["Palavra-chave 1", "Palavra-chave 2"],
+    "treinos": [
+        {
+            "dia": 1,
+            "tipo": "Intervalado",
+            "titulo": "🔥 Tiros de Velocidade 400m",
+            "objetivo_sessao": "Desenvolver velocidade e economia de corrida",
+            "distancia_total_km": 6,
+            "tempo_estimado_min": 45,
+            "fases": {
+                "aquecimento": {
+                    "duracao_min": 10,
+                    "descricao": "Trote leve para ativar o corpo",
+                    "pace_sugerido": "7:00-7:30 min/km",
+                    "intensidade": "Leve"
+                },
+                "principal": {
+                    "tipo_estrutura": "intervalado",
+                    "descricao_geral": "5 repetições de 400m em ritmo forte",
+                    "series": [
+                        {
+                            "repeticoes": 5,
+                            "distancia_m": 400,
+                            "pace_alvo": "4:30 min/km",
+                            "descanso_tipo": "trote",
+                            "descanso_duracao": "90 segundos"
+                        }
+                    ],
+                    "como_executar": [
+                        "1️⃣ Posicione-se em local plano",
+                        "2️⃣ Acelere progressivamente nos primeiros 100m",
+                        "3️⃣ Mantenha o ritmo constante no meio",
+                        "4️⃣ Foque na técnica nos últimos 100m",
+                        "5️⃣ Recupere com trote leve entre as séries"
+                    ]
+                },
+                "desaquecimento": {
+                    "duracao_min": 10,
+                    "descricao": "Trote muito leve + alongamento",
+                    "pace_sugerido": "8:00+ min/km",
+                    "intensidade": "Muito Leve"
+                }
+            },
+            "dicas_execucao": [
+                "Hidrate-se antes do treino",
+                "Use tênis com boa resposta",
+                "Se sentir dor, interrompa"
+            ],
+            "sensacao_esperada": "Você deve terminar ofegante nos tiros, mas recuperar durante o descanso",
+            "descricao_completa": "Aquecimento 10min + 5x400m (4:30) c/ 90s trote + Desaquecimento 10min"
+        }
+    ]
+}
+
+IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas baseados no histórico!
+`;
+
 
         const completion = await groq.chat.completions.create({
             messages: [
@@ -120,38 +194,74 @@ const aiService = {
         }
 
         const systemPrompt = `
-            Você é um Treinador de Corrida analítico e motivador.
-            Sua tarefa é comparar o treino PLANEJADO com o REALIZADO pelo atleta.
-            
-            REGRAS DE SAÍDA:
-            - Responda EXCLUSIVAMENTE em formato JSON válido.
-            - Não inclua texto antes ou depois do JSON.
-            
-            FORMATO DO JSON:
-            {
-                "score": (número de 0 a 10, onde 10 é execução perfeita),
-                "status": "Cumpriu" | "Parcial" | "Não Cumpriu" | "Superou",
-                "comentario_coach": "Texto curto, direto e motivador (máx 30 palavras) falando com o atleta ('você').",
-                "pontos_positivos": ["item 1", "item 2"],
-                "pontos_atencao": ["item 1", "item 2"]
-            }
-        `;
+Você é o COACH VIRTUAL, um treinador de corrida experiente e motivador.
+
+🎯 SUA MISSÃO:
+Analisar a execução do treino do atleta comparando o PLANEJADO vs REALIZADO.
+Seja honesto, mas sempre encorajador. O objetivo é ajudar o atleta a evoluir.
+
+📊 CRITÉRIOS DE AVALIAÇÃO:
+- Score 9-10: Execução excelente, superou ou cumpriu perfeitamente
+- Score 7-8: Bom treino, pequenos ajustes necessários
+- Score 5-6: Treino parcial, precisa de atenção
+- Score 3-4: Treino abaixo do esperado, revisar estratégia
+- Score 0-2: Não cumpriu o objetivo
+
+🎭 TOM DE VOZ:
+- Use "você" para falar diretamente com o atleta
+- Seja motivador mesmo ao apontar melhorias
+- Celebre pequenas vitórias
+- Dê sugestões práticas e acionáveis
+
+⚠️ REGRAS:
+- Responda EXCLUSIVAMENTE em formato JSON válido
+- Analise a consistência dos splits (variação de pace)
+- Considere se era um treino de ritmo constante ou intervalado
+
+📤 FORMATO DO JSON:
+{
+    "score": 8,
+    "status": "Cumpriu",
+    "emoji": "🎯",
+    "titulo_feedback": "Treino sólido!",
+    "comentario_coach": "Mensagem direta e motivadora (2-3 frases, use o contexto do treino)",
+    "analise_splits": "Análise da consistência do ritmo km a km",
+    "pontos_positivos": ["Ponto específico 1", "Ponto específico 2"],
+    "pontos_atencao": ["Sugestão de melhoria 1"],
+    "dica_proxima": "Uma dica prática para o próximo treino similar"
+}
+`;
 
         const userPrompt = `
-            TREINO PLANEJADO:
-            - Tipo: ${planned.tipo}
-            - Meta: ${planned.distancia_km}km
-            - Contexto: ${planned.description || "N/A"}
+════════════════════════════════════════
+📋 TREINO PLANEJADO
+════════════════════════════════════════
+Tipo: ${planned.tipo || "Corrida"}
+Objetivo: ${planned.objetivo_sessao || "Treino padrão"}
+Distância Alvo: ${planned.distancia_km || "N/A"}km
+Descrição: ${planned.description || "N/A"}
 
-            TREINO REALIZADO:
-            - Média Geral: ${calculatePace(actual.average_speed)} min/km
-            - Distância Total: ${(actual.distance / 1000).toFixed(2)} km
-            
-            PARCIAIS (SPLITS KM a KM):
-            ${splitsTexto}
+${planned.fases?.principal ? `
+Estrutura Principal: ${planned.fases.principal.tipo_estrutura || "contínuo"}
+${planned.fases.principal.series ? `Séries: ${JSON.stringify(planned.fases.principal.series)}` : ""}
+` : ""}
 
-            Analise a consistência do ritmo e a aderência ao plano.
-        `;
+════════════════════════════════════════
+✅ TREINO REALIZADO
+════════════════════════════════════════
+Distância Total: ${(actual.distance / 1000).toFixed(2)} km
+Pace Médio: ${calculatePace(actual.average_speed)} min/km
+Tempo Total: ${Math.round(actual.moving_time / 60)} minutos
+${actual.average_heartrate ? `FC Média: ${Math.round(actual.average_heartrate)} bpm` : ""}
+
+════════════════════════════════════════
+📊 PARCIAIS (SPLITS KM A KM)
+════════════════════════════════════════
+${splitsTexto}
+
+Analise se o atleta manteve consistência no ritmo e se cumpriu o objetivo do treino.
+`;
+
         
         try {
             const completion = await groq.chat.completions.create({

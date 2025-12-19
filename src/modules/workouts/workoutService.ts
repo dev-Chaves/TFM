@@ -22,10 +22,22 @@ const workoutService = {
                 scheduleDate: workoutDate,
                 description: treino.descricao_completa,
                 structure: {
+                    // Campos básicos
                     tipo: treino.tipo,
-                    distancia_km: treino.distancia_estimada_km,
+                    titulo: treino.titulo,
+                    objetivo_sessao: treino.objetivo_sessao,
+                    distancia_km: treino.distancia_total_km,
                     tempo_min: treino.tempo_estimado_min,
-                    contexto_semana: aiPlan.resumo_semana
+                    
+                    // Nova estrutura detalhada
+                    fases: treino.fases,
+                    dicas_execucao: treino.dicas_execucao,
+                    sensacao_esperada: treino.sensacao_esperada,
+                    
+                    // Contexto do plano
+                    contexto_semana: aiPlan.resumo_semana,
+                    mensagem_coach: aiPlan.mensagem_coach,
+                    foco_semana: aiPlan.foco_semana
                 },
                 completedActivityId: undefined,
                 aiFeedback: undefined
