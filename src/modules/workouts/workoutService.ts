@@ -11,11 +11,13 @@ const workoutService = {
         };
 
         const startDate = new Date();
+        startDate.setDate(startDate.getDate() + 1);
+        startDate.setHours(0, 0, 0, 0);
 
-        const workoutsToSave: SaveWorkoutDTO[] = aiPlan.treinos.map((treino) => {
+        const workoutsToSave: SaveWorkoutDTO[] = aiPlan.treinos.map((treino, index) => {
             
             const workoutDate = new Date(startDate);
-            workoutDate.setDate(startDate.getDate() + (treino.dia - 1));
+            workoutDate.setDate(startDate.getDate() + index);
 
             return {
                 userId: userId,

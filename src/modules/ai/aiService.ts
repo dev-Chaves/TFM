@@ -80,10 +80,11 @@ ${historyContext || "Sem histórico disponível - atleta novo, seja conservador 
 📝 INSTRUÇÕES DE GERAÇÃO
 ════════════════════════════════════════
 1. Analise o pace médio recente para definir paces realistas
-2. Distribua os ${goal.weeklyFrequency} treinos ao longo da semana (dias 1 a 7)
-3. Varie os tipos de treino para desenvolvimento completo
-4. Para INTERVALADOS, detalhe cada série com precisão
-5. Inclua dicas práticas de execução
+2. Gere exatamente ${goal.weeklyFrequency} treinos numerados sequencialmente (dia: 1, 2, 3...)
+3. Dia 1 = amanhã, Dia 2 = depois de amanhã, etc.
+4. Varie os tipos de treino para desenvolvimento completo
+5. Para INTERVALADOS, detalhe cada série com precisão
+6. Inclua dicas práticas de execução
 
 ════════════════════════════════════════
 📤 FORMATO DE SAÍDA (JSON EXATO)
