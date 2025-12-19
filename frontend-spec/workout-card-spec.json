@@ -1,0 +1,300 @@
+{
+    "component_spec": "WorkoutCard - Componente de Card de Treino Completo",
+    "description": "Este JSON define a estrutura de dados que o backend retorna e como o frontend deve renderizar os cards de treino de forma completa e detalhada.",
+    "data_structure": {
+        "treino": {
+            "dia": 1,
+            "tipo": "Intervalado",
+            "titulo": "🔥 Tiros de Velocidade 400m",
+            "objetivo_sessao": "Desenvolver velocidade e economia de corrida",
+            "distancia_total_km": 6,
+            "tempo_estimado_min": 45,
+            "status": "Pendente",
+            "data": "2024-12-24",
+            "fases": {
+                "aquecimento": {
+                    "duracao_min": 10,
+                    "descricao": "Trote leve para ativar o corpo",
+                    "pace_sugerido": "7:00-7:30 min/km",
+                    "intensidade": "Leve"
+                },
+                "principal": {
+                    "tipo_estrutura": "intervalado",
+                    "descricao_geral": "5 repetições de 400m em ritmo forte",
+                    "pace_alvo": "4:30 min/km",
+                    "zona_fc": 4,
+                    "series": [
+                        {
+                            "repeticoes": 5,
+                            "distancia_m": 400,
+                            "pace_alvo": "4:30 min/km",
+                            "descanso_tipo": "trote",
+                            "descanso_duracao": "90 segundos"
+                        }
+                    ],
+                    "como_executar": [
+                        "1️⃣ Posicione-se em local plano (pista ou calçada reta)",
+                        "2️⃣ Nos 400m, acelere progressivamente nos primeiros 100m",
+                        "3️⃣ Mantenha o ritmo constante no meio do tiro",
+                        "4️⃣ Nos últimos 100m, mantenha a forma mesmo cansado",
+                        "5️⃣ Recupere com trote leve entre as séries, não pare"
+                    ]
+                },
+                "desaquecimento": {
+                    "duracao_min": 10,
+                    "descricao": "Trote muito leve + alongamento dinâmico",
+                    "pace_sugerido": "8:00+ min/km",
+                    "intensidade": "Muito Leve"
+                }
+            },
+            "dicas_execucao": [
+                "Hidrate-se bem antes do treino",
+                "Use tênis com boa resposta para os tiros",
+                "Se sentir dor, interrompa imediatamente"
+            ],
+            "sensacao_esperada": "Você deve terminar ofegante nos tiros, mas recuperar durante o trote. Se não conseguir recuperar, reduza o pace.",
+            "contexto_semana": "Semana focada em desenvolver velocidade. Após a rodagem leve de ontem, seu corpo está pronto para estímulos mais intensos.",
+            "mensagem_coach": "Joao, você vem mostrando consistência nos treinos! Hoje é dia de colocar velocidade nas pernas. Confie no processo! 💪"
+        }
+    },
+    "ui_layout": {
+        "sections": [
+            {
+                "name": "Header",
+                "elements": [
+                    {
+                        "field": "data",
+                        "format": "Qua., 24 De Dez.",
+                        "position": "left"
+                    },
+                    {
+                        "field": "status",
+                        "component": "Badge",
+                        "colors": {
+                            "Pendente": "yellow",
+                            "Concluido": "green",
+                            "Perdido": "red"
+                        },
+                        "position": "right"
+                    }
+                ]
+            },
+            {
+                "name": "Title Block",
+                "elements": [
+                    {
+                        "field": "titulo",
+                        "style": "heading-lg",
+                        "example": "🔥 Tiros de Velocidade 400m"
+                    },
+                    {
+                        "field": "objetivo_sessao",
+                        "style": "subtitle-muted",
+                        "example": "Desenvolver velocidade e economia de corrida"
+                    }
+                ]
+            },
+            {
+                "name": "Quick Stats",
+                "layout": "horizontal-pills",
+                "elements": [
+                    {
+                        "icon": "🏃",
+                        "field": "distancia_total_km",
+                        "suffix": "km"
+                    },
+                    {
+                        "icon": "⏱️",
+                        "field": "tempo_estimado_min",
+                        "suffix": "min"
+                    },
+                    {
+                        "icon": "💓",
+                        "field": "fases.principal.zona_fc",
+                        "prefix": "Zona ",
+                        "optional": true
+                    }
+                ]
+            },
+            {
+                "name": "Phases Timeline",
+                "layout": "vertical-timeline",
+                "collapsible": false,
+                "elements": [
+                    {
+                        "phase": "aquecimento",
+                        "icon": "🌡️",
+                        "title": "Aquecimento",
+                        "show_fields": [
+                            "duracao_min",
+                            "descricao",
+                            "pace_sugerido"
+                        ],
+                        "color": "blue"
+                    },
+                    {
+                        "phase": "principal",
+                        "icon": "🎯",
+                        "title": "Principal",
+                        "show_fields": [
+                            "descricao_geral"
+                        ],
+                        "highlight": true,
+                        "color": "orange",
+                        "sub_component": "SeriesCard"
+                    },
+                    {
+                        "phase": "desaquecimento",
+                        "icon": "❄️",
+                        "title": "Desaquecimento",
+                        "show_fields": [
+                            "duracao_min",
+                            "descricao",
+                            "pace_sugerido"
+                        ],
+                        "color": "green"
+                    }
+                ]
+            },
+            {
+                "name": "Series Detail",
+                "condition": "tipo_estrutura === 'intervalado'",
+                "layout": "card-highlight",
+                "background": "gradient-orange",
+                "elements": [
+                    {
+                        "field": "fases.principal.series",
+                        "render_each": {
+                            "format": "{repeticoes}x {distancia_m}m @ {pace_alvo}",
+                            "secondary": "Descanso: {descanso_duracao} ({descanso_tipo})"
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "How To Execute",
+                "collapsible": true,
+                "default_collapsed": true,
+                "icon": "📋",
+                "title": "Como Executar",
+                "elements": [
+                    {
+                        "field": "fases.principal.como_executar",
+                        "render": "ordered-list",
+                        "style": "step-by-step"
+                    }
+                ]
+            },
+            {
+                "name": "Coach Tips",
+                "layout": "horizontal-scroll-chips",
+                "icon": "💡",
+                "title": "Dicas do Coach",
+                "elements": [
+                    {
+                        "field": "dicas_execucao",
+                        "render": "chips",
+                        "max_visible": 3
+                    }
+                ]
+            },
+            {
+                "name": "Expected Feeling",
+                "layout": "callout-box",
+                "icon": "🧠",
+                "background": "subtle-purple",
+                "elements": [
+                    {
+                        "field": "sensacao_esperada",
+                        "style": "italic-quote"
+                    }
+                ]
+            },
+            {
+                "name": "Coach Message",
+                "layout": "message-bubble",
+                "avatar": "coach-icon",
+                "elements": [
+                    {
+                        "field": "mensagem_coach",
+                        "style": "personal-message"
+                    }
+                ]
+            }
+        ]
+    },
+    "styling_guidelines": {
+        "colors": {
+            "aquecimento": "#3B82F6",
+            "principal": "#F59E0B",
+            "desaquecimento": "#10B981",
+            "background_card": "#1E1E2E",
+            "text_primary": "#FFFFFF",
+            "text_secondary": "#A1A1AA",
+            "accent": "#F59E0B"
+        },
+        "typography": {
+            "titulo": "font-bold text-xl",
+            "objetivo": "text-sm text-gray-400",
+            "phase_title": "font-semibold text-md",
+            "body": "text-sm"
+        },
+        "spacing": {
+            "card_padding": "16px",
+            "section_gap": "12px",
+            "phase_gap": "8px"
+        }
+    },
+    "example_render": {
+        "description": "Exemplo de como o card deve aparecer renderizado:",
+        "visual_structure": [
+            "┌─────────────────────────────────────────────────┐",
+            "│  Qua., 24 De Dez.                  ◯ Pendente  │",
+            "├─────────────────────────────────────────────────┤",
+            "│  🔥 Tiros de Velocidade 400m                   │",
+            "│  Desenvolver velocidade e economia de corrida  │",
+            "├─────────────────────────────────────────────────┤",
+            "│  🏃 6 km    ⏱️ 45 min    💓 Zona 4             │",
+            "├─────────────────────────────────────────────────┤",
+            "│  🌡️ AQUECIMENTO (10 min)                       │",
+            "│  └─ Trote leve | Pace: 7:00-7:30 min/km       │",
+            "│                                                 │",
+            "│  🎯 PRINCIPAL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │",
+            "│  ┌───────────────────────────────────────────┐ │",
+            "│  │     5x 400m @ 4:30 min/km                 │ │",
+            "│  │     Descanso: 90s trote                   │ │",
+            "│  └───────────────────────────────────────────┘ │",
+            "│                                                 │",
+            "│  ❄️ DESAQUECIMENTO (10 min)                    │",
+            "│  └─ Trote leve + alongamento | 8:00+ min/km   │",
+            "├─────────────────────────────────────────────────┤",
+            "│  📋 Como Executar                    [▼ Abrir] │",
+            "├─────────────────────────────────────────────────┤",
+            "│  💡 [Hidrate-se] [Tênis adequado] [+1 mais]    │",
+            "├─────────────────────────────────────────────────┤",
+            "│  🧠 \"Você deve terminar ofegante nos tiros...\" │",
+            "├─────────────────────────────────────────────────┤",
+            "│  🤖 Coach: Joao, você vem mostrando...         │",
+            "└─────────────────────────────────────────────────┘"
+        ]
+    },
+    "conditional_rendering": {
+        "series_section": {
+            "show_when": "fases.principal.tipo_estrutura === 'intervalado'",
+            "hide_when": "fases.principal.tipo_estrutura === 'continuo'"
+        },
+        "pace_alvo_continuo": {
+            "show_when": "fases.principal.tipo_estrutura === 'continuo'",
+            "field": "fases.principal.pace_alvo"
+        },
+        "zona_fc": {
+            "show_when": "fases.principal.zona_fc !== null"
+        }
+    },
+    "interactions": {
+        "card_click": "Expande para mostrar detalhes completos",
+        "como_executar_toggle": "Colapsa/expande lista de passos",
+        "dicas_chip_click": "Mostra dica em tooltip/modal",
+        "strava_link": "Se status === 'Concluido', mostrar botão para ver no Strava"
+    }
+}

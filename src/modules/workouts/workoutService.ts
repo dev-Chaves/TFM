@@ -104,23 +104,45 @@ const workoutService = {
 
             return {
                 id: w.id,
-                data: w.scheduleDate, // O frontend espera string data ISO
+                data: w.scheduleDate,
                 status: status,
                 description: w.description,
                 
-                // Mapeamento direto para as props do ActivityCard
+                // Campos básicos
                 tipo: structure?.tipo || "Treino",
+                titulo: structure?.titulo || structure?.tipo || "Treino",
+                objetivo_sessao: structure?.objetivo_sessao || "",
                 distancia_planejada: Number(structure?.distancia_km || 0),
+                tempo_estimado_min: Number(structure?.tempo_min || 0),
                 pace_planejado: pacePlanejado,
                 
+                // Nova estrutura detalhada de fases
+                fases: structure?.fases || null,
+                
+                // Dicas e sensação esperada
+                dicas_execucao: structure?.dicas_execucao || [],
+                sensacao_esperada: structure?.sensacao_esperada || "",
+                
+                // Contexto do plano
+                contexto_semana: structure?.contexto_semana || "",
+                mensagem_coach: structure?.mensagem_coach || "",
+                foco_semana: structure?.foco_semana || [],
+                
+                // Dados realizados (quando completado)
                 distancia_realizada: distanciaRealizada, 
                 pace_realizado: paceRealizado,           
 
-                coach: feedback ? {
-                    pontuacao: feedback.score || 0,
-                    comentario: feedback.comentario_coach || "",
-                    aspectos_positivos: feedback.pontos_positivos || [],
-                    areas_melhoria: feedback.pontos_atencao || []
+                // Feedback do coach
+                coach: feedback?.feedbackText ? {
+                    score: feedback.feedbackText.score || 0,
+                    status: feedback.feedbackText.status || "",
+                    emoji: feedback.feedbackText.emoji || "🎯",
+                    titulo_feedback: feedback.feedbackText.titulo_feedback || "",
+                    comentario: feedback.feedbackText.comentario_coach || "",
+                    analise_splits: feedback.feedbackText.analise_splits || "",
+                    aspectos_positivos: feedback.feedbackText.pontos_positivos || [],
+                    areas_melhoria: feedback.feedbackText.pontos_atencao || [],
+                    dica_proxima: feedback.feedbackText.dica_proxima || ""
                 } : undefined
             };
         });
