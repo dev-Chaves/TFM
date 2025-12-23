@@ -1,10 +1,22 @@
-import { and, desc, eq, isNull, gte } from "drizzle-orm";
+import { and, desc, eq, isNull, gte, max } from "drizzle-orm";
 import db from "../../db/db";
 import { workouts } from "../../db/schema";
 import { SaveWorkoutDTO } from "./workoutDTO";
 
 
 const workoutRepository = {
+
+    // Busca a última data de treino agendado do usuário
+    async getLastScheduledDate(userId: number): Promise<Date | null> {
+        const result = await db.select({ maxDate: max(workouts.scheduleDate) })
+            .from(workouts)
+            .where(eq(workouts.userId, userId));
+        
+        if (result[0]?.maxDate) {
+            return new Date(result[0].maxDate);
+        }
+        return null;
+    },
 
     // Deleta treinos pendentes (não concluídos) a partir de hoje
     async deletePendingWorkouts(userId: number) {

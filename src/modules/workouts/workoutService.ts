@@ -5,13 +5,23 @@ import userRepository from "../users/userRepository";
 import { DayOfWeek } from "../ai/aiDTO";
 
 // Função auxiliar para encontrar as próximas datas disponíveis
-function getNextAvailableDates(availableDays: DayOfWeek[], count: number): Date[] {
+// Se startAfterDate for passado, começa a buscar a partir do dia seguinte a essa data
+function getNextAvailableDates(availableDays: DayOfWeek[], count: number, startAfterDate?: Date | null): Date[] {
     const dates: Date[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    let currentDate = new Date(today);
-    currentDate.setDate(currentDate.getDate() + 1); // Começa amanhã
+    let currentDate: Date;
+    
+    if (startAfterDate) {
+        // Começa no dia seguinte à última data de treino
+        currentDate = new Date(startAfterDate);
+        currentDate.setHours(0, 0, 0, 0);
+        currentDate.setDate(currentDate.getDate() + 1);
+    } else {
+        // Sem treinos anteriores: começa a partir de hoje
+        currentDate = new Date(today);
+    }
     
     while (dates.length < count) {
         const dayOfWeek = currentDate.getDay() as DayOfWeek;
@@ -22,9 +32,9 @@ function getNextAvailableDates(availableDays: DayOfWeek[], count: number): Date[
         
         currentDate.setDate(currentDate.getDate() + 1);
         
-        // Segurança: máximo 30 dias no futuro
-        if (dates.length === 0 && currentDate.getTime() - today.getTime() > 30 * 24 * 60 * 60 * 1000) {
-            throw new Error("Não foi possível encontrar dias disponíveis nos próximos 30 dias");
+        // Segurança: máximo 60 dias no futuro
+        if (dates.length === 0 && currentDate.getTime() - today.getTime() > 60 * 24 * 60 * 60 * 1000) {
+            throw new Error("Não foi possível encontrar dias disponíveis nos próximos 60 dias");
         }
     }
     
@@ -39,7 +49,14 @@ const workoutService = {
             throw new Error("Plano de treino inválido: Nenhum treino encontrado.");
         };
 
-        await workoutRepository.deletePendingWorkouts(userId);
+        // Busca a última data de treino agendado para adicionar os novos após essa data
+        const lastScheduledDate = await workoutRepository.getLastScheduledDate(userId);
+        
+        if (lastScheduledDate) {
+            console.log(`[saveWorkout] Última data agendada: ${lastScheduledDate.toISOString().split('T')[0]}`);
+        } else {
+            console.log(`[saveWorkout] Nenhum treino anterior encontrado`);
+        }
 
         const user = await userRepository.getUserById(userId);
         const availableDays = user?.currentGoal?.availableDays;
@@ -52,13 +69,15 @@ const workoutService = {
         let scheduleDates: Date[];
         
         if (availableDays && availableDays.length > 0) {
-            // Usa os dias disponíveis do usuário
-            scheduleDates = getNextAvailableDates(availableDays, treinosParaSalvar.length);
+            // Usa os dias disponíveis do usuário, começando após o último treino agendado
+            scheduleDates = getNextAvailableDates(availableDays, treinosParaSalvar.length, lastScheduledDate);
             console.log(`[saveWorkout] Datas calculadas: ${scheduleDates.map(d => d.toISOString().split('T')[0]).join(', ')}`);
         } else {
-            // Fallback: dias consecutivos começando amanhã
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() + 1);
+            // Fallback: dias consecutivos começando após o último treino
+            const startDate = lastScheduledDate ? new Date(lastScheduledDate) : new Date();
+            if (lastScheduledDate) {
+                startDate.setDate(startDate.getDate() + 1); // Dia seguinte ao último treino
+            }
             startDate.setHours(0, 0, 0, 0);
             
             scheduleDates = treinosParaSalvar.map((_, index) => {
