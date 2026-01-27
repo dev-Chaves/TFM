@@ -4,6 +4,19 @@ import activityService from "./activityService";
 const activityController = {
 
     async getActivities(c: Context) {
+        const id = Number(c.get("userId"));
+        if(Number.isNaN(id)) return c.json({erro: `ID Inválido`}, 400);
+
+        try {
+            const activities = await activityService.getActivities(id);
+            return c.json(activities);
+        } catch (err) {
+            console.error(err);
+            return c.json({ error: "Erro ao buscar atividades." }, 500);
+        }
+    },
+
+    async syncActivities(c: Context) {
 
         const id = Number(c.get("userId"));
 

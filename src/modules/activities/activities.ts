@@ -7,5 +7,6 @@ const activities = new Hono();
 activities.use("/*", authMiddleware);
 
 activities.get("/", activityController.getActivities);
+activities.post("/sync", activityController.syncActivities);
 
 export default activities;

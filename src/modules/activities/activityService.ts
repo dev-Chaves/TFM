@@ -2,6 +2,7 @@ import aiService from "../ai/aiService";
 import userRepository from "../users/userRepository"
 import workoutRepository from "../workouts/workoutRepository";
 import activityRepository from "./activityRepository";
+import { toActivityResponseDTO } from "./activitiesDTO";
 
 const activityService = {
 
@@ -73,6 +74,11 @@ const activityService = {
         };
 
     },
+
+    async getActivities(userId: number) {
+        const rawActivities = await activityRepository.getLastActivities(userId);
+        return rawActivities.map(toActivityResponseDTO);
+    }
 
 
 }
