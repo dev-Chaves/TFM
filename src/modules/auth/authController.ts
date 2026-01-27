@@ -1,5 +1,5 @@
 import { Context } from "hono";
-import activityService from "../acitivies/activityService";
+import activityService from "../activities/activityService";
 import { sign } from "hono/jwt";
 import authService from "./authService";
 
@@ -18,7 +18,7 @@ const authController = {
         try {
             const response = await authService.exchangeCodeForToken(code);
 
-            activityService.syncActivies(response.id).catch((error) => console.error("Erro no Sync:", error));
+            activityService.syncActivities(response.id).catch((error) => console.error("Erro no Sync:", error));
 
             const payload = {
                 sub: response.id,

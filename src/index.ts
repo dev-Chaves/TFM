@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import auth from './modules/auth/auth';
-import activies from './modules/acitivies/activies';
+import activities from './modules/activities/activities';
 import ai from './modules/ai/ai';
 import users from './modules/users/users';
 import workouts from './modules/workouts/workouts';
@@ -20,14 +20,14 @@ app.use("/*", cors({
 
 app.get('/', (c) => {
 
-  console.log("Hehehe")
+  
 
   return c.text('Hello Hono!');
 });
 
 app.route("/auth", auth);
 
-app.route("/activies", activies);
+app.route("/activities", activities);
 
 app.route("/ai", ai);
 

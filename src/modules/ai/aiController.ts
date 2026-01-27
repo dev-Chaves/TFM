@@ -12,7 +12,6 @@ const aiController = {
 
         // IDEMPOTÊNCIA: Verificar se já há uma geração em andamento
         if (generationLocks.get(userId)) {
-            console.log(`[generateWorkoutPlan] Bloqueado - geração já em andamento para userId: ${userId}`);
             return c.json({
                 error: "Geração de treino já em andamento. Aguarde.",
                 code: "GENERATION_IN_PROGRESS"
@@ -22,7 +21,6 @@ const aiController = {
         try {
             // Adquirir lock
             generationLocks.set(userId, true);
-            console.log(`[generateWorkoutPlan] Lock adquirido para userId: ${userId}`);
 
             const response = await aiService.generateWorkoutPlan(userId);
 
@@ -37,7 +35,6 @@ const aiController = {
         } finally {
             // Liberar lock SEMPRE
             generationLocks.delete(userId);
-            console.log(`[generateWorkoutPlan] Lock liberado para userId: ${userId}`);
         }
 
     }

@@ -2,10 +2,10 @@ import { Hono } from "hono";
 import activityController from "./activityController";
 import { authMiddleware } from "../../shared/middlewares/authMiddleware";
 
-const activies = new Hono();
+const activities = new Hono();
 
-activies.use("/*", authMiddleware);
+activities.use("/*", authMiddleware);
 
-activies.get("/", activityController.getActivies);
+activities.get("/", activityController.getActivities);
 
-export default activies;
+export default activities;

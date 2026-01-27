@@ -1,0 +1,112 @@
+{
+    "task": "Correção do Payload de GoalConfig no Frontend TFM",
+    "description": "O backend foi atualizado para receber um payload diferente do frontend. Esta especificação detalha as mudanças necessárias no componente GoalModal para enviar os dados no formato correto.",
+    "current_issue": "O frontend pode estar enviando availableDays com índices incorretos (ex: usando índice do array em vez do valor real do dia da semana JavaScript)",
+    "expected_payload": {
+        "endpoint": "PATCH /users/goal",
+        "method": "PATCH",
+        "body": {
+            "targetRace": "string - Nome da prova (ex: 'Maratona do Rio')",
+            "raceDistance": "string - Distância: '5k' | '10k' | '21k' | '42k' | 'ultra'",
+            "targetTime": "string - Tempo alvo no formato HH:MM:SS (ex: '04:00:00')",
+            "raceDate": "string - Data da prova no formato YYYY-MM-DD",
+            "currentLevel": "string - Nível: 'iniciante' | 'intermediario' | 'avancado'",
+            "weeklyAvailability": "string - Frequência semanal como string (ex: '4')",
+            "availableDays": "number[] - Array de números representando dias da semana",
+            "additionalNotes": "string - Notas adicionais do atleta"
+        }
+    },
+    "critical_fix": {
+        "field": "availableDays",
+        "description": "IMPORTANTE: Os valores devem seguir o padrão JavaScript Date.getDay()",
+        "mapping": {
+            "Domingo": 0,
+            "Segunda": 1,
+            "Terça": 2,
+            "Quarta": 3,
+            "Quinta": 4,
+            "Sexta": 5,
+            "Sábado": 6
+        },
+        "ui_implementation": {
+            "component": "DaySelector ou ToggleButtonGroup",
+            "buttons": [
+                {
+                    "label": "Dom",
+                    "value": 0
+                },
+                {
+                    "label": "Seg",
+                    "value": 1
+                },
+                {
+                    "label": "Ter",
+                    "value": 2
+                },
+                {
+                    "label": "Qua",
+                    "value": 3
+                },
+                {
+                    "label": "Qui",
+                    "value": 4
+                },
+                {
+                    "label": "Sex",
+                    "value": 5
+                },
+                {
+                    "label": "Sáb",
+                    "value": 6
+                }
+            ],
+            "example_correct": "Se usuário seleciona Terça e Quinta, enviar: [2, 4]",
+            "example_wrong": "NÃO enviar índices do array tipo [1, 3] se Ter/Qui são 2º e 4º botões"
+        }
+    },
+    "payload_example": {
+        "targetRace": "São Silvestre 2025",
+        "raceDistance": "10k",
+        "targetTime": "00:50:00",
+        "raceDate": "2025-12-31",
+        "currentLevel": "intermediario",
+        "weeklyAvailability": "3",
+        "availableDays": [
+            2,
+            4,
+            6
+        ],
+        "additionalNotes": "Quero melhorar meu pace"
+    },
+    "react_code_example": {
+        "description": "Exemplo de implementação correta do seletor de dias",
+        "code": "const DAYS_OF_WEEK = [\n  { value: 0, label: 'Dom' },\n  { value: 1, label: 'Seg' },\n  { value: 2, label: 'Ter' },\n  { value: 3, label: 'Qua' },\n  { value: 4, label: 'Qui' },\n  { value: 5, label: 'Sex' },\n  { value: 6, label: 'Sáb' }\n];\n\n// Estado\nconst [availableDays, setAvailableDays] = useState<number[]>([]);\n\n// Toggle de dia\nconst toggleDay = (dayValue: number) => {\n  setAvailableDays(prev => \n    prev.includes(dayValue) \n      ? prev.filter(d => d !== dayValue)\n      : [...prev, dayValue].sort((a, b) => a - b)\n  );\n};\n\n// Renderização\n{DAYS_OF_WEEK.map(day => (\n  <button\n    key={day.value}\n    onClick={() => toggleDay(day.value)}\n    className={availableDays.includes(day.value) ? 'selected' : ''}\n  >\n    {day.label}\n  </button>\n))}\n\n// No submit, envie availableDays diretamente (já contém os valores corretos)"
+    },
+    "backend_transformations": {
+        "description": "O backend agora transforma os dados automaticamente:",
+        "transformations": [
+            "raceDistance: '5k' → targetDistanceKm: 5",
+            "raceDistance: '10k' → targetDistanceKm: 10",
+            "raceDistance: '21k' → targetDistanceKm: 21",
+            "raceDistance: '42k' → targetDistanceKm: 42",
+            "raceDistance: 'ultra' → targetDistanceKm: 50",
+            "currentLevel: 'iniciante' → experienceLevel: 'beginner'",
+            "currentLevel: 'intermediario' → experienceLevel: 'intermediate'",
+            "currentLevel: 'avancado' → experienceLevel: 'advanced'",
+            "weeklyAvailability: '4' → weeklyFrequency: 4",
+            "targetRace + targetTime + additionalNotes → text (concatenado)"
+        ]
+    },
+    "validation_rules": [
+        "availableDays.length deve ser >= weeklyAvailability",
+        "raceDate deve ser uma data futura",
+        "targetTime deve estar no formato HH:MM:SS",
+        "currentLevel deve ser um dos valores válidos (case insensitive)"
+    ],
+    "testing_checklist": [
+        "[ ] Verificar se ao selecionar Terça, o valor 2 é adicionado ao array",
+        "[ ] Verificar se ao selecionar Quinta, o valor 4 é adicionado ao array",
+        "[ ] Verificar console.log do payload antes de enviar",
+        "[ ] Verificar logs do backend: '[updateGoal] availableDays recebido: [2, 4]'"
+    ]
+}

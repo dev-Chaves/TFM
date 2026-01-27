@@ -30,7 +30,7 @@ const workoutRepository = {
             ))
             .returning();
         
-        console.log(`[deletePendingWorkouts] Deletados ${deleted.length} treinos pendentes do userId ${userId}`);
+        
         return deleted;
     },
 

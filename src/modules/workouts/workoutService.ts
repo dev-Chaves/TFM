@@ -53,9 +53,7 @@ const workoutService = {
         const lastScheduledDate = await workoutRepository.getLastScheduledDate(userId);
         
         if (lastScheduledDate) {
-            console.log(`[saveWorkout] Última data agendada: ${lastScheduledDate.toISOString().split('T')[0]}`);
         } else {
-            console.log(`[saveWorkout] Nenhum treino anterior encontrado`);
         }
 
         const user = await userRepository.getUserById(userId);
@@ -63,15 +61,12 @@ const workoutService = {
         const weeklyFrequency = user?.currentGoal?.weeklyFrequency || aiPlan.treinos.length;
         
         const treinosParaSalvar = aiPlan.treinos.slice(0, weeklyFrequency);
-        
-        console.log(`[saveWorkout] userId: ${userId}, weeklyFrequency: ${weeklyFrequency}, salvando: ${treinosParaSalvar.length} treinos`);
-        
+                
         let scheduleDates: Date[];
         
         if (availableDays && availableDays.length > 0) {
             // Usa os dias disponíveis do usuário, começando após o último treino agendado
             scheduleDates = getNextAvailableDates(availableDays, treinosParaSalvar.length, lastScheduledDate);
-            console.log(`[saveWorkout] Datas calculadas: ${scheduleDates.map(d => d.toISOString().split('T')[0]).join(', ')}`);
         } else {
             // Fallback: dias consecutivos começando após o último treino
             const startDate = lastScheduledDate ? new Date(lastScheduledDate) : new Date();
@@ -85,7 +80,6 @@ const workoutService = {
                 date.setDate(startDate.getDate() + index);
                 return date;
             });
-            console.log(`[saveWorkout] Fallback - Datas consecutivas: ${scheduleDates.map(d => d.toISOString().split('T')[0]).join(', ')}`);
         }
 
         const workoutsToSave: SaveWorkoutDTO[] = treinosParaSalvar.map((treino, index) => {

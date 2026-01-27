@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 import userRepository from "../users/userRepository";
-import activityRepository from "../acitivies/activityRepository";
+import activityRepository from "../activities/activityRepository";
 import { calculatePace, formatActivyForAI } from "./aiFormatter";
 import workoutService from "../workouts/workoutService";
 
@@ -283,7 +283,7 @@ Analise se o atleta manteve consistência no ritmo e se cumpriu o objetivo do tr
 
             await workoutService.saveAiFeedback(workoutId, { feedbackText: aiFeedback });
             
-            console.log(`[IA Coach] Feedback gerado com sucesso para o treino ${workoutId}`);
+            
 
         } catch (error) {
             console.error(`[IA Coach] Erro ao analisar treino ${workoutId}:`, error);

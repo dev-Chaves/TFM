@@ -1,6 +1,6 @@
 import { Context } from "hono";
 import userRepository from "../users/userRepository";
-import activityService from "../acitivies/activityService";
+import activityService from "../activities/activityService";
 import webhookService from "./webhookService";
 
 const webHookController = {
@@ -12,7 +12,7 @@ const webHookController = {
     const challenge = c.req.query("hub.challenge");   
 
     if (mode === "subscribe" && token === process.env.WEBHOOK_VERIFICATION_TOKEN) {
-        console.log("WEBHOOK_VERIFIED");
+        
         return c.json({"hub.challenge": challenge});
     }
 
@@ -34,7 +34,7 @@ const webHookController = {
                 throw new Error("Usuário não encontrado para o Strava ID: " + stravaId);
             }
 
-            await activityService.syncActivies(user.id).catch((err) => {
+            await activityService.syncActivities(user.id).catch((err) => {
                 console.error("Erro ao sincronizar atividades para o usuário ID: " + user.id + " - " + err.message);
             });
             

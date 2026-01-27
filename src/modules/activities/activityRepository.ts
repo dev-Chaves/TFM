@@ -4,11 +4,11 @@ import { eq, sql } from "drizzle-orm";
 
 const activityRepository = { 
 
-    async saveActivies (userId: number, stravaActivies: any[]) {
+    async saveActivities (userId: number, stravaActivities: any[]) {
 
-        if (stravaActivies.length === 0) return[];
+        if (stravaActivities.length === 0) return[];
 
-        const valuesToInsert = stravaActivies.map(activity => ({
+        const valuesToInsert = stravaActivities.map(activity => ({
             userId: userId,
             stravaActivityId: activity.id,
             name: activity.name,
@@ -19,7 +19,7 @@ const activityRepository = {
             rawData: activity
         }));       
 
-        const saveActivies =  await db.insert(activities)
+        const savedActivities =  await db.insert(activities)
             .values(valuesToInsert)
             .onConflictDoUpdate({
                 target: activities.stravaActivityId,
@@ -32,7 +32,7 @@ const activityRepository = {
                 }
             }).returning();
 
-            return saveActivies;
+            return savedActivities;
 
     },
 

@@ -3,7 +3,7 @@ import activityService from "./activityService";
 
 const activityController = {
 
-    async getActivies(c: Context) {
+    async getActivities(c: Context) {
 
         const id = Number(c.get("userId"));
 
@@ -15,7 +15,7 @@ const activityController = {
 
         try {
 
-            const response = await activityService.syncActivies(id);
+            const response = await activityService.syncActivities(id);
 
             return c.json(response);
 

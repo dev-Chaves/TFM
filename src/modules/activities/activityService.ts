@@ -5,7 +5,7 @@ import activityRepository from "./activityRepository";
 
 const activityService = {
 
-    async syncActivies (userId: number) {
+    async syncActivities (userId: number) {
 
         const user = await userRepository.getUserById(userId);
 
@@ -32,13 +32,13 @@ const activityService = {
 
         const data = await response.json();
 
-        const saveActivies = await activityRepository.saveActivies(user.id, data);
+        const savedActivities = await activityRepository.saveActivities(user.id, data);
 
         const workoutsNotCompleted = await workoutRepository.getWorkoutByUserId(userId);
 
         let matchesFound = 0;
 
-        for (const activity of saveActivies) {
+        for (const activity of savedActivities) {
 
             const activityDate = activity.startDate ? new Date(activity.startDate).toISOString().split('T')[0] : null;
 
@@ -59,17 +59,13 @@ const activityService = {
                     match.id,
                     match.structure,
                     activity.rawData)
-                .then(()=> {
-                    console.log(`Feedback da IA salvo para o treino ID: ${match.id}`);
-                }).catch((err) => {
+                .catch((err) => {
                     console.error(`Erro ao gerar feedback da IA para o treino ID: ${match.id} - ${err.message}`);
                 });
 
             }
 
         }
-
-        console.log("User ID:", user.id, "Novas atividades:", data.length);
 
         return {
             message: `Sincronização realizada com sucesso`,

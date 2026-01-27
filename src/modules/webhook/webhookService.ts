@@ -16,7 +16,7 @@ const webhookService = {
             const currentViews = await viewResponse.json();
 
             if (Array.isArray(currentViews) && currentViews.length > 0) {
-                console.log("Deletando subscrição antiga...");
+                
                 await fetch(`https://www.strava.com/api/v3/push_subscriptions/${currentViews[0].id}?client_id=${process.env.CLIENT_ID}&client_secret=${process.env.CLIENT_SECRET}`, {
                     method: "DELETE"
                 });
