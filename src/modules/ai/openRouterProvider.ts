@@ -3,6 +3,7 @@ import { AIProvider, AICompletionOptions } from './aiProvider.interface';
 const client = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
     apiKey: process.env.OPENROUTER_API_KEY,
+    timeout: 120000, // 120 seconds
     defaultHeaders: {
         "HTTP-Referer": process.env.APP_URL || "https://tfm.app",
         "X-Title": "TFM - Training Flow Manager",

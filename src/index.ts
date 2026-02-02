@@ -57,4 +57,5 @@ log.info({ port: process.env.PORT }, "🚀 Server starting");
 export default {
   port: process.env.PORT,
   fetch: app.fetch,
+  idleTimeout: 120, // 120 seconds
 }

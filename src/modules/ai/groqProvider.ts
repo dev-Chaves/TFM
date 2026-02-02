@@ -1,7 +1,10 @@
 import Groq from "groq-sdk";
 import { AIProvider, AICompletionOptions } from './aiProvider.interface';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = new Groq({ 
+    apiKey: process.env.GROQ_API_KEY,
+    timeout: 120000 // 120 seconds
+});
 
 export const groqProvider: AIProvider = {
     name: "Groq/Llama-3.3-70B",
