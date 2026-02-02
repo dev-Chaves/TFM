@@ -1,16 +1,38 @@
+import { z } from "zod";
 import aiService from "../ai/aiService";
 import userRepository from "../users/userRepository"
 import workoutRepository from "../workouts/workoutRepository";
 import activityRepository from "./activityRepository";
-import { toActivityResponseDTO } from "./activitiesDTO";
+import { ActivityResponseDTO, toActivityResponseDTO, ActivityEntity } from "./activitiesDTO";
+import { StravaActivity, StravaActivitySchema, WorkoutStructure } from "../../shared/schemas";
+import { createLogger } from "../../shared/utils/logger";
+
+const log = createLogger("ActivityService");
+
+/**
+ * Response type for sync activities operation
+ */
+export interface SyncActivitiesResponse {
+    message: string;
+    new_activities_linked: number;
+}
 
 const activityService = {
 
-    async syncActivities (userId: number) {
+    /**
+     * Sincroniza atividades do Strava para o banco de dados
+     * e vincula atividades realizadas com treinos planejados
+     */
+    async syncActivities(userId: number): Promise<SyncActivitiesResponse> {
+
+        log.info({ userId }, "Iniciando sincronização de atividades");
 
         const user = await userRepository.getUserById(userId);
 
-        if(!user) throw new Error("Usuário não encontrado");
+        if(!user) {
+            log.warn({ userId }, "Usuário não encontrado");
+            throw new Error("Usuário não encontrado");
+        }
 
         const lastActivity = await activityRepository.getLastActivityByUserId(userId);
         
@@ -18,9 +40,10 @@ const activityService = {
         if (lastActivity?.startDate) {
             const timestamp = Math.floor(new Date(lastActivity.startDate).getTime() / 1000);
             afterParam = `&after=${timestamp}`;
+            log.debug({ lastActivityDate: lastActivity.startDate }, "Buscando atividades após última sincronização");
         }
 
-        const url: string = `https://www.strava.com/api/v3/athlete/activities?per_page=30${afterParam}`;
+        const url = `https://www.strava.com/api/v3/athlete/activities?per_page=30${afterParam}`;
 
         const response = await fetch(url, {
             method: "GET",
@@ -29,11 +52,30 @@ const activityService = {
             }
         });
 
-        if(!response.ok) throw new Error(`Error ao consultar atividades do atleta: ${response.statusText}`);
+        if(!response.ok) {
+            log.error({ status: response.status, statusText: response.statusText }, "Erro ao consultar atividades do Strava");
+            throw new Error(`Error ao consultar atividades do atleta: ${response.statusText}`);
+        }
 
-        const data = await response.json();
+        const rawData: unknown = await response.json();
 
-        const savedActivities = await activityRepository.saveActivities(user.id, data);
+        // Valida o array de atividades do Strava
+        const activitiesArraySchema = z.array(StravaActivitySchema);
+        const parseResult = activitiesArraySchema.safeParse(rawData);
+        
+        let stravaActivities: StravaActivity[];
+        if (parseResult.success) {
+            stravaActivities = parseResult.data;
+        } else {
+            log.warn({ error: parseResult.error.message }, "Strava response não passou validação Zod, usando dados raw");
+            stravaActivities = rawData as StravaActivity[];
+        }
+
+        log.info({ count: stravaActivities.length }, "Atividades recebidas do Strava");
+
+        const savedActivities = await activityRepository.saveActivities(user.id, stravaActivities);
+
+        log.info({ savedCount: savedActivities.length }, "Atividades salvas no banco");
 
         const workoutsNotCompleted = await workoutRepository.getWorkoutByUserId(userId);
 
@@ -53,20 +95,25 @@ const activityService = {
                 
                 matchesFound++;
 
-                // Sem o await ela funcionara de forma assíncrona, não bloqueando o fluxo principal e respeitando o tempo de resposta da API
-                // Fire-and-forget Pattern => fazemos que não esperamos o resultado dessa chamada para continuar
-                aiService.generateWorkoutFeedback(
-                    match.userId, 
-                    match.id,
-                    match.structure,
-                    activity.rawData)
-                .catch((err) => {
-                    console.error(`Erro ao gerar feedback da IA para o treino ID: ${match.id} - ${err.message}`);
-                });
+                log.info({ workoutId: match.id, activityId: activity.id, date: activityDate }, "Atividade vinculada ao treino planejado");
 
+                // Fire-and-forget Pattern: não espera o resultado dessa chamada para continuar
+                const rawActivityData = activity.rawData as StravaActivity | null;
+                if (rawActivityData) {
+                    aiService.generateWorkoutFeedback(
+                        match.userId, 
+                        match.id,
+                        match.structure as WorkoutStructure | null,
+                        rawActivityData
+                    ).catch((err: Error) => {
+                        log.error({ workoutId: match.id, error: err.message }, "Erro ao gerar feedback da IA");
+                    });
+                }
             }
 
         }
+
+        log.info({ userId, newActivities: savedActivities.length, matchesFound }, "Sincronização concluída");
 
         return {
             message: `Sincronização realizada com sucesso`,
@@ -75,11 +122,14 @@ const activityService = {
 
     },
 
-    async getActivities(userId: number) {
+    /**
+     * Retorna as últimas atividades do usuário formatadas para o frontend
+     */
+    async getActivities(userId: number): Promise<ActivityResponseDTO[]> {
+        log.debug({ userId }, "Buscando atividades do usuário");
         const rawActivities = await activityRepository.getLastActivities(userId);
-        return rawActivities.map(toActivityResponseDTO);
+        return rawActivities.map((activity) => toActivityResponseDTO(activity as ActivityEntity));
     }
-
 
 }
 

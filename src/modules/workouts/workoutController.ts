@@ -1,36 +1,83 @@
 import { Context } from "hono";
+import { z } from "zod";
 import workoutService from "./workoutService";
+import { DashboardItem } from "./workoutDTO";
+import { PlanoSemanalAISchema, PlanoSemanalAI } from "../../shared/schemas";
+import { createLogger } from "../../shared/utils/logger";
+
+const log = createLogger("WorkoutController");
+
+/**
+ * Schema para validar o payload de criação de workout
+ */
+const SaveWorkoutRequestSchema = PlanoSemanalAISchema;
+
+/**
+ * Response types
+ */
+interface SaveWorkoutSuccessResponse {
+    message: string;
+}
+
+interface ErrorResponse {
+    error: string;
+}
 
 const workoutController = {
 
-    async saveWorkout(c: Context) {
+    /**
+     * Salva um plano de treino para o usuário
+     */
+    async saveWorkout(c: Context): Promise<Response> {
 
-        const userId = c.get("userId");
+        const userId = Number(c.get("userId"));
 
-        if(Number.isNaN(userId)) return c.json({error: `ID Inválido`}, 400);
+        if(Number.isNaN(userId)) {
+            return c.json<ErrorResponse>({error: `ID Inválido`}, 400);
+        }
 
-        const workoutData = await c.req.json();
+        const rawData: unknown = await c.req.json();
         
-        try{    
+        // Valida o payload com Zod
+        const parseResult = SaveWorkoutRequestSchema.safeParse(rawData);
+        
+        if (!parseResult.success) {
+            log.warn({ userId, errors: parseResult.error.message }, "Payload inválido");
+            return c.json<ErrorResponse>({error: "Payload inválido"}, 400);
+        }
+
+        const workoutData: PlanoSemanalAI = parseResult.data;
+        
+        try {    
             await workoutService.saveWorkout(userId, workoutData);
         
-            return c.json({message: "Treino salvo com sucesso."}); 
+            return c.json<SaveWorkoutSuccessResponse>({message: "Treino salvo com sucesso."}); 
 
         } catch (error) {
-            return c.json({error: "Erro ao salvar treino."}, 500);
+            log.error({ userId, error: error instanceof Error ? error.message : error }, "Erro ao salvar treino");
+            return c.json<ErrorResponse>({error: "Erro ao salvar treino."}, 500);
         }
 
     },
 
-    async getWorkoutByUserId(c: Context){
+    /**
+     * Retorna os dados do dashboard para o usuário
+     */
+    async getWorkoutByUserId(c: Context): Promise<Response> {
 
-        const userId = c.get("userId");
+        const userId = Number(c.get("userId"));
 
-        if(Number.isNaN(userId)) return c.json({erro: `ID Inválido`}, 400);
+        if(Number.isNaN(userId)) {
+            return c.json<ErrorResponse>({erro: `ID Inválido`} as unknown as ErrorResponse, 400);
+        }
 
-        const response = await workoutService.getDashboardData(userId);
-
-        return c.json(response);
+        try {
+            const response: DashboardItem[] = await workoutService.getDashboardData(userId);
+            return c.json(response);
+        } catch (error) {
+            log.error({ userId, error: error instanceof Error ? error.message : error }, "Erro ao buscar dados do dashboard");
+            return c.json<ErrorResponse>({error: "Erro ao buscar dados."}, 500);
+        }
 
     }
 

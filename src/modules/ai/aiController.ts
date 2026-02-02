@@ -1,18 +1,48 @@
 import { Context } from "hono";
 import aiService from "./aiService";
+import { TreinoAI } from "../../shared/schemas";
+import { createLogger } from "../../shared/utils/logger";
 
-// Lock em memória para evitar chamadas simultâneas do mesmo usuário
+const log = createLogger("AIController");
+
+/**
+ * Lock em memória para evitar chamadas simultâneas do mesmo usuário
+ */
 const generationLocks = new Map<number, boolean>();
+
+/**
+ * Response types
+ */
+interface GenerateWorkoutSuccessResponse {
+    message: string;
+    resumo: string;
+    objetivo?: string;
+    treinos: TreinoAI[];
+}
+
+interface ErrorResponse {
+    error: string;
+    code?: string;
+}
 
 const aiController = {
 
-    async generateWorkoutPlan(c: Context) {
+    /**
+     * Gera um plano de treino semanal usando IA
+     * Implementa idempotência com lock em memória
+     */
+    async generateWorkoutPlan(c: Context): Promise<Response> {
 
         const userId = Number(c.get("userId"));
 
+        if (Number.isNaN(userId)) {
+            return c.json<ErrorResponse>({error: "ID de usuário inválido"}, 400);
+        }
+
         // IDEMPOTÊNCIA: Verificar se já há uma geração em andamento
         if (generationLocks.get(userId)) {
-            return c.json({
+            log.warn({ userId }, "Tentativa de geração duplicada bloqueada");
+            return c.json<ErrorResponse>({
                 error: "Geração de treino já em andamento. Aguarde.",
                 code: "GENERATION_IN_PROGRESS"
             }, 429); // Too Many Requests
@@ -21,14 +51,16 @@ const aiController = {
         try {
             // Adquirir lock
             generationLocks.set(userId, true);
+            log.info({ userId }, "Iniciando geração de plano de treino");
 
             const response = await aiService.generateWorkoutPlan(userId);
 
-            return c.json(response);
+            log.info({ userId }, "Plano de treino retornado com sucesso");
+            return c.json<GenerateWorkoutSuccessResponse>(response);
 
         } catch(err) {
-            console.error(err);
-            return c.json({
+            log.error({ userId, error: err instanceof Error ? err.message : err }, "Erro ao gerar plano de treino");
+            return c.json<ErrorResponse>({
                 error: "Erro interno no servidor."
             }, 500);
 

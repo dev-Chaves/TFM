@@ -1,48 +1,68 @@
 import { Context } from "hono";
-import activityService from "./activityService";
+import { ActivityResponseDTO } from "./activitiesDTO";
+import activityService, { SyncActivitiesResponse } from "./activityService";
+import { createLogger } from "../../shared/utils/logger";
+
+const log = createLogger("ActivityController");
+
+/**
+ * Response types
+ */
+interface ErrorResponse {
+    error?: string;
+    erro?: string; // para manter compatibilidade
+}
 
 const activityController = {
 
-    async getActivities(c: Context) {
+    /**
+     * Retorna as últimas atividades do usuário
+     */
+    async getActivities(c: Context): Promise<Response> {
         const id = Number(c.get("userId"));
-        if(Number.isNaN(id)) return c.json({erro: `ID Inválido`}, 400);
+        
+        if(Number.isNaN(id)) {
+            return c.json<ErrorResponse>({erro: `ID Inválido`}, 400);
+        }
 
         try {
-            const activities = await activityService.getActivities(id);
+            const activities: ActivityResponseDTO[] = await activityService.getActivities(id);
             return c.json(activities);
         } catch (err) {
-            console.error(err);
-            return c.json({ error: "Erro ao buscar atividades." }, 500);
+            log.error({ userId: id, error: err instanceof Error ? err.message : err }, "Erro ao buscar atividades");
+            return c.json<ErrorResponse>({ error: "Erro ao buscar atividades." }, 500);
         }
     },
 
-    async syncActivities(c: Context) {
+    /**
+     * Sincroniza atividades do Strava para o banco de dados
+     */
+    async syncActivities(c: Context): Promise<Response> {
 
         const id = Number(c.get("userId"));
 
-        if(Number.isNaN(id)) return c.json({erro: `ID Inválido`}, 400);
+        if(Number.isNaN(id)) {
+            return c.json<ErrorResponse>({erro: `ID Inválido`}, 400);
+        }
 
         const error = c.req.query("error");
 
-        if(error) return c.json({error: "Erro ao acessar atividades do atleta"}, 400);
-
-        try {
-
-            const response = await activityService.syncActivities(id);
-
-            return c.json(response);
-
-        }catch (err) {
-
-            console.error(err);
-
-            return c.json({
-                error: "Erro interno no servidor."
-            }, 500)
-
+        if(error) {
+            log.warn({ userId: id, error }, "Erro no parâmetro de query");
+            return c.json<ErrorResponse>({error: "Erro ao acessar atividades do atleta"}, 400);
         }
 
-        
+        try {
+            log.info({ userId: id }, "Sincronizando atividades");
+            const response: SyncActivitiesResponse = await activityService.syncActivities(id);
+            return c.json(response);
+
+        } catch (err) {
+            log.error({ userId: id, error: err instanceof Error ? err.message : err }, "Erro ao sincronizar atividades");
+            return c.json<ErrorResponse>({
+                error: "Erro interno no servidor."
+            }, 500);
+        }
 
     }
 

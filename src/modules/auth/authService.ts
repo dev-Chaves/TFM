@@ -1,54 +1,88 @@
-import { authResponse } from "./authDto";
+import { 
+    AuthResponse, 
+    StravaTokenResponse, 
+    StravaTokenResponseSchema,
+    StravaAthleteResponse 
+} from "./authDto";
 import userRepository from "../users/userRepository";
 import userService from "../users/userService";
+import { createLogger } from "../../shared/utils/logger";
+
+const log = createLogger("AuthService");
 
 const authService = {
 
-    async exchangeCodeForToken (code: string): Promise<authResponse> {
+    /**
+     * Troca o código de autorização do Strava por tokens de acesso
+     * e cria/atualiza o usuário no banco de dados
+     */
+    async exchangeCodeForToken(code: string): Promise<AuthResponse> {
 
-    if(!code) throw new Error("Código inválido.");
+        if(!code) {
+            log.warn("Tentativa de autenticação sem código");
+            throw new Error("Código inválido.");
+        }
 
-    try {
-        const tokenResponse = await fetch(`https://www.strava.com/oauth/token`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                client_id: process.env.CLIENT_ID,
-                client_secret: process.env.CLIENT_SECRET,
-                code: code,
-                grant_type: "authorization_code"
-            }),
-        });
+        log.info("Iniciando troca de código por token");
 
-        const data = await tokenResponse.json();
+        try {
+            const tokenResponse = await fetch(`https://www.strava.com/oauth/token`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    client_id: process.env.CLIENT_ID,
+                    client_secret: process.env.CLIENT_SECRET,
+                    code: code,
+                    grant_type: "authorization_code"
+                }),
+            });
 
-        if(data.errors) throw new Error("Erro ao trocar o código pelo token.");
+            const rawData: unknown = await tokenResponse.json();
 
-        const { access_token, refresh_token, expires_at, athlete } = data;
+            // Verifica erros na resposta
+            if (typeof rawData === 'object' && rawData !== null && 'errors' in rawData) {
+                log.error({ errors: rawData }, "Erro na resposta do Strava");
+                throw new Error("Erro ao trocar o código pelo token.");
+            }
 
-        const user = await userRepository.saveUser(athlete, access_token, refresh_token, expires_at);
+            // Valida a resposta com Zod
+            const parseResult = StravaTokenResponseSchema.safeParse(rawData);
+            
+            let tokenData: StravaTokenResponse;
+            if (parseResult.success) {
+                tokenData = parseResult.data;
+            } else {
+                log.warn({ error: parseResult.error.message }, "Token response não passou validação Zod");
+                tokenData = rawData as StravaTokenResponse;
+            }
 
-        const isFirstLogin = user.firstLogin ? "true" : await userService.updateUserFirstLoginToFalse(user.id) ; 
+            const { access_token, refresh_token, expires_at, athlete } = tokenData;
 
-        return {
-            id: user.id,
-            strava_id: user.stravaId ?? 0,
-            strava_name: user.name,
-            first_login: isFirstLogin
-        };
+            log.info({ athleteId: athlete.id, athleteName: `${athlete.firstname} ${athlete.lastname}` }, "Atleta autenticado com sucesso");
 
-    }catch (err) {
+            const user = await userRepository.saveUser(athlete, access_token, refresh_token, expires_at);
 
-        console.error(err);
+            const isFirstLogin: string = user.firstLogin 
+                ? "true" 
+                : await userService.updateUserFirstLoginToFalse(user.id);
 
-        throw new Error("Erro ao autenticar usuário.");
+            log.info({ userId: user.id, firstLogin: isFirstLogin }, "Usuário salvo/atualizado no banco");
+
+            return {
+                id: user.id,
+                strava_id: user.stravaId ?? 0,
+                strava_name: user.name,
+                first_login: isFirstLogin
+            };
+
+        } catch (err) {
+            log.error({ error: err instanceof Error ? err.message : err }, "Erro ao autenticar usuário");
+            throw new Error("Erro ao autenticar usuário.");
+        }
     }
-}
 
 }
-
-
 
 export default authService;
