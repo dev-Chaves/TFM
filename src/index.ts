@@ -6,8 +6,25 @@ import ai from './modules/ai/ai';
 import users from './modules/users/users';
 import workouts from './modules/workouts/workouts';
 import webhook from './modules/webhook/webhook';
+import logger, { createLogger } from './shared/utils/logger';
+
+const log = createLogger("Server");
 
 const app = new Hono();
+
+// Request logging middleware
+app.use('*', async (c, next) => {
+  const start = Date.now();
+  await next();
+  const duration = Date.now() - start;
+  
+  log.info({
+    method: c.req.method,
+    path: c.req.path,
+    status: c.res.status,
+    duration: `${duration}ms`
+  }, "Request completed");
+});
 
 app.use("/*", cors({
   origin: ["https://gotfm.site", "https://www.gotfm.site"],
@@ -19,9 +36,6 @@ app.use("/*", cors({
 }));
 
 app.get('/', (c) => {
-
-  
-
   return c.text('Hello Hono!');
 });
 
@@ -36,6 +50,9 @@ app.route("/users", users);
 app.route("/workouts", workouts);
 
 app.route("/webhook", webhook);
+
+// Startup log
+log.info({ port: process.env.PORT }, "🚀 Server starting");
 
 export default {
   port: process.env.PORT,
