@@ -1,4 +1,5 @@
 import { calculatePace } from "../ai/aiFormatter";
+import { StravaActivity } from "../../shared/schemas";
 
 export interface SaveActivityDTO {
   userId: number;
@@ -8,7 +9,7 @@ export interface SaveActivityDTO {
   distance: number;
   movingTime: number;
   startDate: Date;
-  rawData: Record<string, any>;
+  rawData: StravaActivity;
 }
 
 export interface SaveActivitiesDTO extends Array<SaveActivityDTO> {}
@@ -24,19 +25,37 @@ export interface ActivityResponseDTO {
   pace: string;
 }
 
-export function toActivityResponseDTO(entity: any): ActivityResponseDTO {
+/**
+ * Interface para entidade de atividade do banco de dados
+ */
+export interface ActivityEntity {
+    id: number;
+    userId: number;
+    stravaActivityId: number | null;
+    name: string | null;
+    type: string | null;
+    distance: number | null;
+    movingTime: number | null;
+    startDate: Date | null;
+    rawData: unknown;
+}
+
+export function toActivityResponseDTO(entity: ActivityEntity): ActivityResponseDTO {
     
+    const movingTime = entity.movingTime ?? 0;
+    const distance = entity.distance ?? 0;
+
     // Cálculo do Pace
     let pace = "0:00";
-    if (entity.movingTime > 0 && entity.distance > 0) {
-        const speed = entity.distance / entity.movingTime; // m/s
+    if (movingTime > 0 && distance > 0) {
+        const speed = distance / movingTime; // m/s
         pace = calculatePace(speed);
     }
 
     // Formatação Tempo (Segundos -> HH:MM:SS)
-    const hours = Math.floor(entity.movingTime / 3600);
-    const minutes = Math.floor((entity.movingTime % 3600) / 60);
-    const seconds = entity.movingTime % 60;
+    const hours = Math.floor(movingTime / 3600);
+    const minutes = Math.floor((movingTime % 3600) / 60);
+    const seconds = movingTime % 60;
     
     const timeFormatted = [
         hours > 0 ? hours.toString().padStart(2, '0') : null,
@@ -47,10 +66,10 @@ export function toActivityResponseDTO(entity: any): ActivityResponseDTO {
     return {
         id: entity.id,
         stravaId: Number(entity.stravaActivityId),
-        name: entity.name,
-        type: entity.type,
-        startDate: new Date(entity.startDate).toISOString(),
-        distanceKm: Number((entity.distance / 1000).toFixed(2)),
+        name: entity.name ?? "",
+        type: entity.type ?? "",
+        startDate: entity.startDate ? new Date(entity.startDate).toISOString() : "",
+        distanceKm: Number((distance / 1000).toFixed(2)),
         movingTime: timeFormatted,
         pace: pace
     };

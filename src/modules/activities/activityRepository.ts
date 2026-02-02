@@ -1,10 +1,11 @@
 import db from "../../db/db";
 import {activities} from "../../db/schema";
 import { eq, sql } from "drizzle-orm";
+import { StravaActivity } from "../../shared/schemas";
 
 const activityRepository = { 
 
-    async saveActivities (userId: number, stravaActivities: any[]) {
+    async saveActivities (userId: number, stravaActivities: StravaActivity[]) {
 
         if (stravaActivities.length === 0) return[];
 

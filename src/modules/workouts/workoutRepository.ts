@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, gte, max } from "drizzle-orm";
 import db from "../../db/db";
 import { workouts } from "../../db/schema";
 import { SaveWorkoutDTO } from "./workoutDTO";
+import { AiFeedbackWrapper } from "../../shared/schemas";
 
 
 const workoutRepository = {
@@ -97,7 +98,7 @@ const workoutRepository = {
         return db.select().from(workouts).where(eq(workouts.id, workoutId)).limit(1).then(res => res[0]);
     },
 
-    async saveAiFeedback(workoutId: number, aiFeedback: any) {
+    async saveAiFeedback(workoutId: number, aiFeedback: AiFeedbackWrapper) {
         return db.update(workouts).set({
             aiFeedback: aiFeedback
         }).where(eq(workouts.id, workoutId));

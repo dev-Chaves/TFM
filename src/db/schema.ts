@@ -2,7 +2,7 @@ import { relations } from "drizzle-orm";
 import { boolean, date, jsonb, primaryKey, real, smallint, text } from "drizzle-orm/pg-core";
 import { pgEnum, timestamp, varchar, bigint } from "drizzle-orm/pg-core"; 
 import { integer, pgTable, serial } from "drizzle-orm/pg-core";
-import { GoalConfig } from "../modules/ai/aiDTO";
+import { GoalConfig, WorkoutStructure, AiFeedbackWrapper, StravaActivity } from "../shared/schemas";
 
 export const users = pgTable("users", {
     id: serial("id").primaryKey(), 
@@ -18,7 +18,11 @@ export const users = pgTable("users", {
     expiresAt: timestamp("expires_at", { mode: "date" }),
 
     // Guarda o perfil do atleta para a IA não alucinar
-    profileConfig: jsonb("profile_config"),
+    profileConfig: jsonb("profile_config").$type<{
+        bio: string | null;
+        avatar: string;
+        city: string | null;
+    }>(),
 
     firstLogin: boolean("first_login").default(true),
 
@@ -36,7 +40,7 @@ export const activities = pgTable("activities", {
     startDate: timestamp("start_date"),
 
     // JSON puro do strava caso precisa reprocessar
-    rawData: jsonb("raw_data")
+    rawData: jsonb("raw_data").$type<StravaActivity>()
 })
 
 export const workouts = pgTable("workouts", {
@@ -45,11 +49,11 @@ export const workouts = pgTable("workouts", {
     scheduleDate: date("scheduled_date").notNull(),
     description: text("description").notNull(),
 
-    structure: jsonb("structure"),
+    structure: jsonb("structure").$type<WorkoutStructure>(),
 
     completedActivityId: integer("completed_activity_id").references(()=> activities.id),
 
-    aiFeedback: jsonb("ai_feedback"),
+    aiFeedback: jsonb("ai_feedback").$type<AiFeedbackWrapper>(),
 
     createdAt: timestamp("created_at").defaultNow()
 });

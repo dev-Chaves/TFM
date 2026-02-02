@@ -1,4 +1,9 @@
-interface CleanActivityForAI {
+import { StravaActivity } from "../../shared/schemas";
+
+/**
+ * Interface para atividade formatada para consumo da IA
+ */
+export interface CleanActivityForAI {
     data: string;
     nome: string;
     tipo: string;
@@ -6,11 +11,11 @@ interface CleanActivityForAI {
     tempo_movimento: string; // "34 min"
     pace_medio: string; // "6:41 min/km"
     elevacao: string; // "27m"
-    frequencia_cardiaca: string
+    frequencia_cardiaca: string;
 }
 
 
-export  function calculatePace(speedMetersPerSecond: number): string {
+export function calculatePace(speedMetersPerSecond: number): string {
     if (speedMetersPerSecond === 0) return "0:00";
     const minutesPerKm = 16.666666666667 / speedMetersPerSecond;
     const minutes = Math.floor(minutesPerKm);
@@ -18,7 +23,7 @@ export  function calculatePace(speedMetersPerSecond: number): string {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export function formatActivyForAI(raw: any): CleanActivityForAI {
+export function formatActivyForAI(raw: StravaActivity): CleanActivityForAI {
 
     const date = new Date(raw.start_date).toLocaleDateString('pt-BR');
     const distanceKm = (raw.distance / 1000).toFixed(2);

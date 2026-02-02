@@ -3,20 +3,48 @@ import userRepository from "../users/userRepository";
 import activityRepository from "../activities/activityRepository";
 import { calculatePace, formatActivyForAI } from "./aiFormatter";
 import workoutService from "../workouts/workoutService";
+import { 
+    StravaActivity, 
+    StravaSplitMetric, 
+    WorkoutStructure,
+    PlanoSemanalAI,
+    TreinoAI 
+} from "../../shared/schemas";
+import { createLogger } from "../../shared/utils/logger";
+
+const log = createLogger("AIService");
+
+/**
+ * Response type for workout plan generation
+ */
+export interface GenerateWorkoutPlanResponse {
+    message: string;
+    resumo: string;
+    objetivo?: string;
+    treinos: TreinoAI[];
+}
 
 const groq = new Groq({apiKey: process.env.GROQ_API_KEY});
 
 const aiService = {
 
-    async generateWorkoutPlan(userId: number){
+    /**
+     * Gera um plano de treino semanal personalizado usando IA
+     */
+    async generateWorkoutPlan(userId: number): Promise<GenerateWorkoutPlanResponse> {
+
+        log.info({ userId }, "Iniciando geração de plano de treino");
 
         const user = await userRepository.getUserById(userId);
 
-        if(!user) throw new Error("Usuário não encontrado");
+        if(!user) {
+            log.warn({ userId }, "Usuário não encontrado");
+            throw new Error("Usuário não encontrado");
+        }
 
         const recentActivities = await activityRepository.getLastActivities(userId, 5);
 
-        const historyContext = recentActivities.map(a => formatActivyForAI(a.rawData)).map(a => 
+        const historyContext = recentActivities.map(a => formatActivyForAI(a.rawData as StravaActivity)).map(a => 
             `- Data: ${a.data}, Tipo: ${a.tipo}, Dist: ${a.distancia_km}, Tempo: ${a.tempo_movimento}, Pace: ${a.pace_medio}, FC: ${a.frequencia_cardiaca}`
         ).join("\n");
 
@@ -163,9 +191,14 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
 
         const aiContent = completion.choices[0].message.content;
 
-        if(!aiContent) throw new Error("Resposta da IA inválida");
+        if(!aiContent) {
+            log.error({ userId }, "Resposta da IA vazia");
+            throw new Error("Resposta da IA inválida");
+        }
 
-        const plan = JSON.parse(aiContent);
+        const plan: PlanoSemanalAI = JSON.parse(aiContent);
+
+        log.info({ userId, treinosCount: plan.treinos.length }, "Plano de treino gerado com sucesso");
 
         await workoutService.saveWorkout(userId, plan);
 
@@ -178,7 +211,16 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
 
     },
 
-    async generateWorkoutFeedback(userId: number, workoutId: number, planned: any, actual: any) {
+    /**
+     * Gera feedback de treino comparando o planejado com o realizado
+     * Fire-and-forget: não retorna nada, apenas salva o feedback no banco
+     */
+    async generateWorkoutFeedback(
+        userId: number, 
+        workoutId: number, 
+        planned: WorkoutStructure | null, 
+        actual: StravaActivity
+    ): Promise<void> {
 
         const user = await userRepository.getUserById(userId);
 
@@ -188,7 +230,7 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
         let splitsTexto = "Não disponível";
         if (actual.splits_metric && Array.isArray(actual.splits_metric)) {
             splitsTexto = actual.splits_metric
-                .map((split: any, index: number) => {
+                .map((split: StravaSplitMetric, index: number) => {
                     const pace = calculatePace(split.average_speed);
                     return `Km ${index + 1}: ${pace}`;
                 })
@@ -238,12 +280,12 @@ Seja honesto, mas sempre encorajador. O objetivo é ajudar o atleta a evoluir.
 ════════════════════════════════════════
 📋 TREINO PLANEJADO
 ════════════════════════════════════════
-Tipo: ${planned.tipo || "Corrida"}
-Objetivo: ${planned.objetivo_sessao || "Treino padrão"}
-Distância Alvo: ${planned.distancia_km || "N/A"}km
-Descrição: ${planned.description || "N/A"}
+Tipo: ${planned?.tipo || "Corrida"}
+Objetivo: ${planned?.objetivo_sessao || "Treino padrão"}
+Distância Alvo: ${planned?.distancia_km || "N/A"}km
+Descrição: ${planned?.titulo || "N/A"}
 
-${planned.fases?.principal ? `
+${planned?.fases?.principal ? `
 Estrutura Principal: ${planned.fases.principal.tipo_estrutura || "contínuo"}
 ${planned.fases.principal.series ? `Séries: ${JSON.stringify(planned.fases.principal.series)}` : ""}
 ` : ""}
@@ -285,8 +327,10 @@ Analise se o atleta manteve consistência no ritmo e se cumpriu o objetivo do tr
             
             
 
+            log.info({ workoutId }, "Feedback de treino gerado e salvo com sucesso");
+
         } catch (error) {
-            console.error(`[IA Coach] Erro ao analisar treino ${workoutId}:`, error);
+            log.error({ workoutId, error: error instanceof Error ? error.message : error }, "Erro ao analisar treino");
         }
     },
 

@@ -1,8 +1,17 @@
 import { calculatePace } from "../ai/aiFormatter";
-import { DashboardItem, PlanoSemanalAI, SaveWorkoutDTO } from "./workoutDTO";
+import { DashboardItem, SaveWorkoutDTO, DashboardCoachFeedback } from "./workoutDTO";
 import workoutRepository from "./workoutRepository";
 import userRepository from "../users/userRepository";
-import { DayOfWeek } from "../ai/aiDTO";
+import { 
+    DayOfWeek, 
+    PlanoSemanalAI, 
+    WorkoutStructure, 
+    AiFeedbackWrapper,
+    FasesTreino 
+} from "../../shared/schemas";
+import { createLogger } from "../../shared/utils/logger";
+
+const log = createLogger("WorkoutService");
 
 // Função auxiliar para encontrar as próximas datas disponíveis
 // Se startAfterDate for passado, começa a buscar a partir do dia seguinte a essa data
@@ -45,16 +54,17 @@ const workoutService = {
 
     async saveWorkout(userId: number, aiPlan: PlanoSemanalAI) {
         
+        log.info({ userId, treinosCount: aiPlan.treinos?.length || 0 }, "Salvando plano de treino");
+
         if(!aiPlan.treinos || aiPlan.treinos.length === 0){
+            log.warn({ userId }, "Plano de treino inválido: Nenhum treino encontrado");
             throw new Error("Plano de treino inválido: Nenhum treino encontrado.");
         };
 
         // Busca a última data de treino agendado para adicionar os novos após essa data
         const lastScheduledDate = await workoutRepository.getLastScheduledDate(userId);
         
-        if (lastScheduledDate) {
-        } else {
-        }
+        log.debug({ userId, lastScheduledDate }, "Última data de treino agendado");
 
         const user = await userRepository.getUserById(userId);
         const availableDays = user?.currentGoal?.availableDays;
@@ -66,7 +76,7 @@ const workoutService = {
         
         if (availableDays && availableDays.length > 0) {
             // Usa os dias disponíveis do usuário, começando após o último treino agendado
-            scheduleDates = getNextAvailableDates(availableDays, treinosParaSalvar.length, lastScheduledDate);
+            scheduleDates = getNextAvailableDates(availableDays as DayOfWeek[], treinosParaSalvar.length, lastScheduledDate);
         } else {
             // Fallback: dias consecutivos começando após o último treino
             const startDate = lastScheduledDate ? new Date(lastScheduledDate) : new Date();
@@ -83,23 +93,25 @@ const workoutService = {
         }
 
         const workoutsToSave: SaveWorkoutDTO[] = treinosParaSalvar.map((treino, index) => {
+            const structure: WorkoutStructure = {
+                tipo: treino.tipo,
+                titulo: treino.titulo,
+                objetivo_sessao: treino.objetivo_sessao,
+                distancia_km: treino.distancia_total_km,
+                tempo_min: treino.tempo_estimado_min,
+                fases: treino.fases,
+                dicas_execucao: treino.dicas_execucao,
+                sensacao_esperada: treino.sensacao_esperada,
+                contexto_semana: aiPlan.resumo_semana,
+                mensagem_coach: aiPlan.mensagem_coach,
+                foco_semana: aiPlan.foco_semana
+            };
+
             return {
                 userId: userId,
                 scheduleDate: scheduleDates[index],
                 description: treino.descricao_completa,
-                structure: {
-                    tipo: treino.tipo,
-                    titulo: treino.titulo,
-                    objetivo_sessao: treino.objetivo_sessao,
-                    distancia_km: treino.distancia_total_km,
-                    tempo_min: treino.tempo_estimado_min,
-                    fases: treino.fases,
-                    dicas_execucao: treino.dicas_execucao,
-                    sensacao_esperada: treino.sensacao_esperada,
-                    contexto_semana: aiPlan.resumo_semana,
-                    mensagem_coach: aiPlan.mensagem_coach,
-                    foco_semana: aiPlan.foco_semana
-                },
+                structure: structure,
                 completedActivityId: undefined,
                 aiFeedback: undefined
             };
@@ -116,11 +128,11 @@ const workoutService = {
 
     },
 
-    async saveAiFeedback(workoutId: number, aiFeedback: any) {  
+    async saveAiFeedback(workoutId: number, aiFeedback: AiFeedbackWrapper) {  
         return workoutRepository.saveAiFeedback(workoutId, aiFeedback);
     },
 
-    async getDashboardData(userId: number) {
+    async getDashboardData(userId: number): Promise<DashboardItem[]> {
         
         if(userId == null) throw new Error("ID Inválido");
         
@@ -138,12 +150,12 @@ const workoutService = {
 
             else if(!w.completedActivityId && w.scheduleDate < hoje) status = 'Perdido';
 
-            const structure = w.structure as any; 
-            const feedback = w.aiFeedback as any;
+            const structure = w.structure as WorkoutStructure | null; 
+            const feedback = w.aiFeedback as AiFeedbackWrapper | null;
             const activity = w.activity; 
             
-            let paceRealizado = undefined;
-            let distanciaRealizada = undefined;
+            let paceRealizado: string | undefined = undefined;
+            let distanciaRealizada: number | undefined = undefined;
 
             if (activity && activity.movingTime && activity.movingTime > 0) {
                 const distKm = (activity.distance ?? 0) / 1000;
@@ -163,6 +175,22 @@ const workoutService = {
                 pacePlanejado = `${min}:${sec.toString().padStart(2, '0')}`;
             }
 
+            // Build coach feedback object if available
+            let coach: DashboardCoachFeedback | undefined = undefined;
+            if (feedback?.feedbackText) {
+                coach = {
+                    score: feedback.feedbackText.score || 0,
+                    status: feedback.feedbackText.status || "",
+                    emoji: feedback.feedbackText.emoji || "🎯",
+                    titulo_feedback: feedback.feedbackText.titulo_feedback || "",
+                    comentario: feedback.feedbackText.comentario_coach || "",
+                    analise_splits: feedback.feedbackText.analise_splits || "",
+                    aspectos_positivos: feedback.feedbackText.pontos_positivos || [],
+                    areas_melhoria: feedback.feedbackText.pontos_atencao || [],
+                    dica_proxima: feedback.feedbackText.dica_proxima || ""
+                };
+            }
+
             return {
                 id: w.id,
                 data: w.scheduleDate,
@@ -178,7 +206,7 @@ const workoutService = {
                 pace_planejado: pacePlanejado,
                 
                 // Nova estrutura detalhada de fases
-                fases: structure?.fases || null,
+                fases: (structure?.fases as FasesTreino) || null,
                 
                 // Dicas e sensação esperada
                 dicas_execucao: structure?.dicas_execucao || [],
@@ -194,17 +222,7 @@ const workoutService = {
                 pace_realizado: paceRealizado,           
 
                 // Feedback do coach
-                coach: feedback?.feedbackText ? {
-                    score: feedback.feedbackText.score || 0,
-                    status: feedback.feedbackText.status || "",
-                    emoji: feedback.feedbackText.emoji || "🎯",
-                    titulo_feedback: feedback.feedbackText.titulo_feedback || "",
-                    comentario: feedback.feedbackText.comentario_coach || "",
-                    analise_splits: feedback.feedbackText.analise_splits || "",
-                    aspectos_positivos: feedback.feedbackText.pontos_positivos || [],
-                    areas_melhoria: feedback.feedbackText.pontos_atencao || [],
-                    dica_proxima: feedback.feedbackText.dica_proxima || ""
-                } : undefined
+                coach: coach
             };
         });
     }

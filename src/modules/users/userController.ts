@@ -1,6 +1,6 @@
 import userService from "./userService";
 import { Context } from "hono";
-import { DayOfWeek } from "../ai/aiDTO";
+import { DayOfWeek, GoalConfig } from "../../shared/schemas";
 
 // =============================================
 // Tipos para o payload do Frontend
@@ -66,7 +66,7 @@ function buildGoalText(targetRace: string, targetTime: string, additionalNotes: 
 /**
  * Transforma o payload do Frontend para o formato GoalConfig esperado pelo Backend
  */
-function transformFrontendPayloadToGoalConfig(payload: FrontendGoalPayload) {
+function transformFrontendPayloadToGoalConfig(payload: FrontendGoalPayload): GoalConfig {
     return {
         targetDistanceKm: mapRaceDistanceToKm(payload.raceDistance),
         targetDate: payload.raceDate,

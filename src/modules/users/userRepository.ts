@@ -1,17 +1,29 @@
 import db from "../../db/db";
-import { authRequest } from "../auth/authDto";
+import { StravaAthleteResponse } from "../auth/authDto";
 import { users } from "../../db/schema";
 import { eq } from "drizzle-orm";
-import { GoalConfig } from "../ai/aiDTO";
+import { GoalConfig } from "../../shared/schemas";
 
+/**
+ * User entity type (inferred from Drizzle schema)
+ */
+export type User = typeof users.$inferSelect;
 
 const userRepository = {
 
-    async saveUser (athlete: authRequest, access_token: string, refresh_token: string, expires_at: number) {
+    /**
+     * Salva ou atualiza um usuário no banco de dados
+     */
+    async saveUser(
+        athlete: StravaAthleteResponse, 
+        access_token: string, 
+        refresh_token: string, 
+        expires_at: number
+    ): Promise<User> {
 
-    const expiresAtDate = new Date(expires_at * 1000);
+        const expiresAtDate = new Date(expires_at * 1000);
 
-    const [user] = await db.insert(users).values({
+        const [user] = await db.insert(users).values({
             name: `${athlete.firstname} ${athlete.lastname}`,
             stravaId: athlete.id,
             accessToken: access_token,
@@ -41,36 +53,40 @@ const userRepository = {
         return user;
     },
 
-    async getUserById(userId: number) {
-
+    /**
+     * Busca usuário por ID interno
+     */
+    async getUserById(userId: number): Promise<User | undefined> {
         const [user] = await db.select().from(users).where(eq(users.id, userId));
-
         return user;
-
     },
 
-    async updateGoal(userId: number, goalData: GoalConfig){
-
-        return db.update(users).set({
+    /**
+     * Atualiza o objetivo do usuário
+     */
+    async updateGoal(userId: number, goalData: GoalConfig): Promise<void> {
+        await db.update(users).set({
             currentGoal: goalData
         }).where(eq(users.id, userId));
-
     },
 
-    async getUserByStravaId(stravaId: number) {
-        
+    /**
+     * Busca usuário por Strava ID
+     */
+    async getUserByStravaId(stravaId: number): Promise<User | undefined> {
         const [user] = await db.select().from(users).where(eq(users.stravaId, stravaId));
-
         return user;
     },
 
-    async updateUserFirstLoginToFalse(userId: number){
-        return db.update(users).set({
+    /**
+     * Marca o primeiro login do usuário como false
+     */
+    async updateUserFirstLoginToFalse(userId: number): Promise<void> {
+        await db.update(users).set({
             firstLogin: false
         }).where(eq(users.id, userId));
     }
 
 }
-
 
 export default userRepository;
