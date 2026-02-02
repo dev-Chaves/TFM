@@ -3,10 +3,10 @@ import { openRouterProvider } from './openRouterProvider';
 import { groqProvider } from './groqProvider';
 import { createLogger } from '../../shared/utils/logger';
 const log = createLogger("AIProvider");
-// Ordem de prioridade dos provedores
+
 const providers: AIProvider[] = [
-    openRouterProvider,
-    groqProvider
+    groqProvider,
+    openRouterProvider
 ];
 export async function generateCompletion(options: AICompletionOptions): Promise<string> {
     let lastError: Error | null = null;

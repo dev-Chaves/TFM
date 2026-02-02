@@ -13,6 +13,7 @@ import {
     TreinoAI 
 } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
+import { canGenerateWorkout, recordGenerationAttempt } from "./countQueue";
 
 const log = createLogger("AIService");
 
@@ -33,6 +34,14 @@ const aiService = {
     async generateWorkoutPlan(userId: number): Promise<GenerateWorkoutPlanResponse> {
 
         log.info({ userId }, "Iniciando geração de plano de treino");
+
+        // RATE LIMIT: Verifica se o usuário pode gerar treino (1 a cada 24h)
+        const check = canGenerateWorkout(userId);
+        if (!check.canGenerate) {
+            const hours = Math.ceil(check.remainingMs / (60 * 60 * 1000));
+            log.warn({ userId, remainingMs: check.remainingMs }, "Limite de geração atingido");
+            throw new Error(`Você já gerou um treino recentemente. Tente novamente em aproximadamente ${hours} horas.`);
+        }
 
         const user = await userRepository.getUserById(userId);
 
@@ -164,6 +173,9 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
         log.info({ userId, semanasCount: plan.semanas.length }, "Plano de treino mensal gerado com sucesso");
 
         await workoutService.saveWorkout(userId, plan);
+
+        // RATE LIMIT: Registra a tentativa após sucesso
+        recordGenerationAttempt(userId);
 
         return {
             message: "Plano de treino mensal gerado com sucesso.",
