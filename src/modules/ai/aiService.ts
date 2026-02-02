@@ -88,8 +88,9 @@ Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de
 ⚠️ REGRAS OBRIGATÓRIAS:
 - Sistema métrico (km, min/km)
 - Paces AEALISTAS mas DESAFIADORES (sobrecarga progressiva) baseados no histórico.
-- PRECISÃO DE PACE: Para cada km ou bloco de kms, ESPECIFIQUE o ritmo alvo (ex: "Km 1: 5:30 min/km").
-- ZONAS DE FC: Indique a zona de frequência cardíaca (Z1-Z5) para cada segmento.
+- PRECISÃO DE PACE: Para CADA km ou bloco (segmento), você DEVE preencher \`pace_alvo\` e \`zona_fc\`.
+- OBRIGATÓRIO: Use o campo \`segmentos\` na fase principal para listar a estratégia km a km (ou por blocos lógicos).
+- ZONAS DE FC: Indique OBRIGATORIAMENTE a zona de frequência cardíaca (Z1-Z5) para cada segmento ou série.
 - Cada treino DEVE ter: aquecimento, parte principal e desaquecimento devidamente separados.
 - Intervalados SEMPRE especificam: repetições, distância, pace exato, zona alvo e tipo de descanso.
 - Tom motivador e pessoal (use "você", seja encorajador).
@@ -149,7 +150,20 @@ ${historyContext || "Sem histórico disponível - atleta novo, seja conservador 
                     "objetivo_sessao": "Adaptação inicial",
                     "distancia_total_km": 5,
                     "tempo_estimado_min": 35,
-                    "fases": { ... mesma estrutura de fases ... },
+                    "fases": {
+                        "aquecimento": { "duracao_min": 10, "descricao": "Trote leve", "pace_sugerido": "6:00", "intensidade": "Leve" },
+                        "principal": {
+                            "tipo_estrutura": "continuo",
+                            "descricao_geral": "5km progressivos",
+                            "segmentos": [
+                                { "distancia_km": 1, "pace_alvo": "5:50", "zona_fc": "Z2", "descricao": "Aquecimento final" },
+                                { "distancia_km": 2, "pace_alvo": "5:40", "zona_fc": "Z3", "descricao": "Ritmo firme" },
+                                { "distancia_km": 2, "pace_alvo": "5:30", "zona_fc": "Z4", "descricao": "Forçar um pouco" }
+                            ],
+                            "como_executar": ["Comece tranquilo", "Acelere a cada km"]
+                        },
+                        "desaquecimento": { ... }
+                    },
                     "dicas_execucao": [...],
                     "sensacao_esperada": "...",
                     "descricao_completa": "..."

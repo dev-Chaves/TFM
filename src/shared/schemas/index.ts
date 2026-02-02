@@ -101,11 +101,25 @@ export const SerieIntervaloSchema = z.object({
     repeticoes: z.number(),
     distancia_m: z.number(),
     pace_alvo: z.string(),
+    zona_fc: z.string().optional(), // Nova prop
     descanso_tipo: z.enum(["parado", "trote", "caminhada"]),
     descanso_duracao: z.string(),
 });
 
 export type SerieIntervalo = z.infer<typeof SerieIntervaloSchema>;
+
+
+/**
+ * Schema para segmentos do treino (km a km ou blocos)
+ */
+export const TreinoSegmentoSchema = z.object({
+    distancia_km: z.number(),
+    pace_alvo: z.string(), // Obrigatório
+    zona_fc: z.string(),   // Obrigatório (ex: "Z2")
+    descricao: z.string().optional(),
+});
+
+export type TreinoSegmento = z.infer<typeof TreinoSegmentoSchema>;
 
 /**
  * Schema para fase principal do treino
@@ -114,7 +128,8 @@ export const FasePrincipalSchema = z.object({
     tipo_estrutura: z.enum(["continuo", "intervalado", "progressivo", "fartlek"]),
     descricao_geral: z.string(),
     pace_alvo: z.string().optional(),
-    zona_fc: z.number().optional(),
+    zona_fc: z.number().optional(), // Deprecado, usar segmentos ou serie.zona_fc
+    segmentos: z.array(TreinoSegmentoSchema).optional(), // Novo campo
     series: z.array(SerieIntervaloSchema).optional(),
     como_executar: z.array(z.string()),
 });
