@@ -6,6 +6,7 @@ import activityRepository from "./activityRepository";
 import { ActivityResponseDTO, toActivityResponseDTO, ActivityEntity } from "./activitiesDTO";
 import { StravaActivity, StravaActivitySchema, WorkoutStructure } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
+import { queueFeedbackGeneration } from "../ai/feedbackQueue";
 
 const log = createLogger("ActivityService");
 
@@ -16,6 +17,136 @@ export interface SyncActivitiesResponse {
     message: string;
     new_activities_linked: number;
 }
+
+/**
+ * Tipo interno para atividade salva com rawData
+ */
+interface SavedActivity {
+    id: number;
+    startDate: Date | null;
+    rawData: StravaActivity | null;
+    distance: number | null;
+    type: string | null;
+}
+
+/**
+ * Tipo para workout não completado
+ */
+interface PendingWorkout {
+    id: number;
+    userId: number;
+    scheduleDate: string;
+    structure: WorkoutStructure | null;
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Extrai a data local da atividade usando start_date_local do Strava
+ * Isso já vem convertido para o timezone do usuário
+ */
+function getLocalDateFromActivity(activity: SavedActivity): string | null {
+    const rawData = activity.rawData;
+    
+    // Prioriza start_date_local que já vem no timezone correto
+    if (rawData?.start_date_local) {
+        return rawData.start_date_local.split('T')[0];
+    }
+    
+    // Fallback: usa startDate do banco
+    if (activity.startDate) {
+        return new Date(activity.startDate).toISOString().split('T')[0];
+    }
+    
+    return null;
+}
+
+/**
+ * Verifica se o tipo de atividade é compatível com o treino planejado
+ */
+function isTypeCompatible(activityType: string | null, workoutType: string | null): boolean {
+    if (!activityType || !workoutType) return false;
+    
+    const runTypes = ['Run', 'VirtualRun', 'TrailRun', 'Treadmill'];
+    const plannedRunTypes = ['Rodagem', 'Longo', 'Intervalado', 'Tempo Run', 'Regenerativo', 'Fartlek'];
+    
+    const isActivityRun = runTypes.includes(activityType);
+    const isPlannedRun = plannedRunTypes.some(t => workoutType.toLowerCase().includes(t.toLowerCase()));
+    
+    return isActivityRun && isPlannedRun;
+}
+
+/**
+ * Calcula score de compatibilidade entre atividade e treino
+ * Maior score = melhor match
+ */
+function calculateMatchScore(activity: SavedActivity, workout: PendingWorkout): number {
+    let score = 0;
+    const structure = workout.structure;
+    
+    if (!structure) return 10; // Base score se não há estrutura
+    
+    // +50 pontos se tipo é compatível (Run -> Rodagem/Longo/etc)
+    if (isTypeCompatible(activity.type, structure.tipo)) {
+        score += 50;
+    }
+    
+    // +50 pontos proporcional à proximidade de distância
+    const targetDist = structure.distancia_km || 0;
+    const actualDist = (activity.distance || 0) / 1000;
+    
+    if (targetDist > 0) {
+        const distDiff = Math.abs(targetDist - actualDist);
+        const distScore = Math.max(0, 50 - distDiff * 10);
+        score += distScore;
+    }
+    
+    return score;
+}
+
+/**
+ * Encontra o melhor match para uma atividade entre os treinos pendentes
+ * Usa score baseado em tipo e distância
+ */
+function findBestMatch(
+    activity: SavedActivity, 
+    activityDate: string, 
+    pendingWorkouts: PendingWorkout[]
+): PendingWorkout | null {
+    // Filtra treinos do mesmo dia que ainda não foram vinculados
+    const sameDayWorkouts = pendingWorkouts.filter(w => 
+        w.scheduleDate === activityDate
+    );
+    
+    if (sameDayWorkouts.length === 0) return null;
+    if (sameDayWorkouts.length === 1) return sameDayWorkouts[0];
+    
+    // Múltiplos treinos no mesmo dia: calcula score e escolhe o melhor
+    log.debug({ activityId: activity.id, candidates: sameDayWorkouts.length }, "Múltiplos treinos no dia, calculando best match");
+    
+    let bestMatch = sameDayWorkouts[0];
+    let bestScore = calculateMatchScore(activity, bestMatch);
+    
+    for (let i = 1; i < sameDayWorkouts.length; i++) {
+        const current = sameDayWorkouts[i];
+        const currentScore = calculateMatchScore(activity, current);
+        
+        if (currentScore > bestScore) {
+            bestMatch = current;
+            bestScore = currentScore;
+        }
+    }
+    
+    log.debug({ workoutId: bestMatch.id, score: bestScore }, "Melhor match selecionado");
+    
+    return bestMatch;
+}
+
+// =============================================================================
+// ACTIVITY SERVICE
+// =============================================================================
 
 const activityService = {
 
@@ -77,19 +208,51 @@ const activityService = {
 
         log.info({ savedCount: savedActivities.length }, "Atividades salvas no banco");
 
-        const workoutsNotCompleted = await workoutRepository.getWorkoutByUserId(userId);
+        // PERFORMANCE: Calcula range de datas das atividades para filtrar treinos
+        const activityDates = savedActivities
+            .map(a => getLocalDateFromActivity(a as SavedActivity))
+            .filter((d): d is string => d !== null)
+            .sort();
+        
+        if (activityDates.length === 0) {
+            log.info({ userId }, "Nenhuma atividade com data válida para sincronizar");
+            return {
+                message: `Sincronização realizada com sucesso`,
+                new_activities_linked: 0
+            };
+        }
 
+        const minDate = activityDates[0];
+        const maxDate = activityDates[activityDates.length - 1];
+
+        log.debug({ minDate, maxDate }, "Range de datas para buscar treinos");
+
+        // PERFORMANCE: Busca apenas treinos no range de datas (não todos)
+        const workoutsNotCompleted = await workoutRepository.getWorkoutsInDateRange(userId, minDate, maxDate);
+
+        log.debug({ count: workoutsNotCompleted.length }, "Treinos pendentes no range");
+
+        // Mantém track dos workouts já vinculados nesta sync
+        const linkedWorkoutIds = new Set<number>();
         let matchesFound = 0;
 
         for (const activity of savedActivities) {
 
-            const activityDate = activity.startDate ? new Date(activity.startDate).toISOString().split('T')[0] : null;
+            // TIMEZONE: Usa data local da atividade
+            const activityDate = getLocalDateFromActivity(activity as SavedActivity);
 
             if(!activityDate) continue;
 
-            const match = workoutsNotCompleted.find(w => w.scheduleDate === activityDate);
+            // Filtra workouts que ainda não foram vinculados nesta sync
+            const availableWorkouts = (workoutsNotCompleted as PendingWorkout[]).filter(
+                w => !linkedWorkoutIds.has(w.id)
+            );
+
+            // BEST MATCH: Seleciona o melhor treino para esta atividade
+            const match = findBestMatch(activity as SavedActivity, activityDate, availableWorkouts);
 
             if(match) {
+                linkedWorkoutIds.add(match.id);
 
                 await workoutRepository.linkActivityToWorkout(match.id, activity.id);
                 
@@ -97,17 +260,15 @@ const activityService = {
 
                 log.info({ workoutId: match.id, activityId: activity.id, date: activityDate }, "Atividade vinculada ao treino planejado");
 
-                // Fire-and-forget Pattern: não espera o resultado dessa chamada para continuar
+                // RETRY LOGIC: Usa queue com retry ao invés de fire-and-forget
                 const rawActivityData = activity.rawData as StravaActivity | null;
                 if (rawActivityData) {
-                    aiService.generateWorkoutFeedback(
+                    queueFeedbackGeneration(
                         match.userId, 
                         match.id,
-                        match.structure as WorkoutStructure | null,
+                        match.structure,
                         rawActivityData
-                    ).catch((err: Error) => {
-                        log.error({ workoutId: match.id, error: err.message }, "Erro ao gerar feedback da IA");
-                    });
+                    );
                 }
             }
 

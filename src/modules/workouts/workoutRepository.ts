@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, gte, max } from "drizzle-orm";
+import { and, desc, eq, isNull, gte, lte, max } from "drizzle-orm";
 import db from "../../db/db";
 import { workouts } from "../../db/schema";
 import { SaveWorkoutDTO } from "./workoutDTO";
@@ -115,6 +115,19 @@ const workoutRepository = {
             limit: 30
         });
 
+    },
+
+    /**
+     * Busca treinos não completados dentro de um range de datas
+     * PERFORMANCE: Evita buscar todos os treinos do usuário
+     */
+    async getWorkoutsInDateRange(userId: number, startDate: string, endDate: string) {
+        return db.select().from(workouts).where(and(
+            eq(workouts.userId, userId),
+            isNull(workouts.completedActivityId),
+            gte(workouts.scheduleDate, startDate),
+            lte(workouts.scheduleDate, endDate)
+        ));
     }
 
 };  
