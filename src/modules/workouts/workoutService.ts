@@ -5,6 +5,7 @@ import userRepository from "../users/userRepository";
 import { 
     DayOfWeek, 
     PlanoSemanalAI, 
+    PlanoMensalAI,
     WorkoutStructure, 
     AiFeedbackWrapper,
     FasesTreino 
@@ -52,13 +53,13 @@ function getNextAvailableDates(availableDays: DayOfWeek[], count: number, startA
 
 const workoutService = {
 
-    async saveWorkout(userId: number, aiPlan: PlanoSemanalAI) {
+    async saveWorkout(userId: number, aiPlan: PlanoMensalAI) {
         
-        log.info({ userId, treinosCount: aiPlan.treinos?.length || 0 }, "Salvando plano de treino");
+        log.info({ userId, semanasCount: aiPlan.semanas?.length || 0 }, "Salvando plano de treino mensal");
 
-        if(!aiPlan.treinos || aiPlan.treinos.length === 0){
-            log.warn({ userId }, "Plano de treino inválido: Nenhum treino encontrado");
-            throw new Error("Plano de treino inválido: Nenhum treino encontrado.");
+        if(!aiPlan.semanas || aiPlan.semanas.length === 0){
+            log.warn({ userId }, "Plano de treino mensal inválido: Nenhuma semana encontrada");
+            throw new Error("Plano de treino mensal inválido: Nenhuma semana encontrada.");
         };
 
         // Busca a última data de treino agendado para adicionar os novos após essa data
@@ -68,54 +69,49 @@ const workoutService = {
 
         const user = await userRepository.getUserById(userId);
         const availableDays = user?.currentGoal?.availableDays;
-        const weeklyFrequency = user?.currentGoal?.weeklyFrequency || aiPlan.treinos.length;
         
-        const treinosParaSalvar = aiPlan.treinos.slice(0, weeklyFrequency);
-                
-        let scheduleDates: Date[];
-        
-        if (availableDays && availableDays.length > 0) {
-            // Usa os dias disponíveis do usuário, começando após o último treino agendado
-            scheduleDates = getNextAvailableDates(availableDays as DayOfWeek[], treinosParaSalvar.length, lastScheduledDate);
-        } else {
-            // Fallback: dias consecutivos começando após o último treino
-            const startDate = lastScheduledDate ? new Date(lastScheduledDate) : new Date();
-            if (lastScheduledDate) {
-                startDate.setDate(startDate.getDate() + 1); // Dia seguinte ao último treino
-            }
-            startDate.setHours(0, 0, 0, 0);
-            
-            scheduleDates = treinosParaSalvar.map((_, index) => {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + index);
-                return date;
-            });
+        if (!availableDays || availableDays.length === 0) {
+            log.warn({ userId }, "Usuário sem dias disponíveis configurados");
+            throw new Error("Por favor, configure seus dias de treino antes de gerar um plano.");
         }
 
-        const workoutsToSave: SaveWorkoutDTO[] = treinosParaSalvar.map((treino, index) => {
-            const structure: WorkoutStructure = {
-                tipo: treino.tipo,
-                titulo: treino.titulo,
-                objetivo_sessao: treino.objetivo_sessao,
-                distancia_km: treino.distancia_total_km,
-                tempo_min: treino.tempo_estimado_min,
-                fases: treino.fases,
-                dicas_execucao: treino.dicas_execucao,
-                sensacao_esperada: treino.sensacao_esperada,
-                contexto_semana: aiPlan.resumo_semana,
-                mensagem_coach: aiPlan.mensagem_coach,
-                foco_semana: aiPlan.foco_semana
-            };
+        const workoutsToSave: SaveWorkoutDTO[] = [];
+        let currentStartDate = lastScheduledDate;
 
-            return {
-                userId: userId,
-                scheduleDate: scheduleDates[index],
-                description: treino.descricao_completa,
-                structure: structure,
-                completedActivityId: undefined,
-                aiFeedback: undefined
-            };
-        });
+        for (const semana of aiPlan.semanas) {
+            const treinosDaSemana = semana.treinos;
+            
+            // Calcula as datas para esta semana específica
+            const scheduleDates = getNextAvailableDates(availableDays as DayOfWeek[], treinosDaSemana.length, currentStartDate);
+            
+            // Atualiza currentStartDate para a última data desta semana para a próxima iteração
+            currentStartDate = scheduleDates[scheduleDates.length - 1];
+
+            treinosDaSemana.forEach((treino, index) => {
+                const structure: WorkoutStructure = {
+                    tipo: treino.tipo,
+                    titulo: treino.titulo,
+                    objetivo_sessao: treino.objetivo_sessao,
+                    distancia_km: treino.distancia_total_km,
+                    tempo_min: treino.tempo_estimado_min,
+                    fases: treino.fases,
+                    dicas_execucao: treino.dicas_execucao,
+                    sensacao_esperada: treino.sensacao_esperada,
+                    contexto_semana: semana.resumo_semana,
+                    mensagem_coach: aiPlan.mensagem_coach,
+                    foco_semana: semana.foco_semana
+                };
+
+                workoutsToSave.push({
+                    userId: userId,
+                    scheduleDate: scheduleDates[index],
+                    description: treino.descricao_completa,
+                    structure: structure,
+                    completedActivityId: undefined,
+                    aiFeedback: undefined
+                });
+            });
+        }
 
         return await workoutRepository.saveMany(workoutsToSave);
     },

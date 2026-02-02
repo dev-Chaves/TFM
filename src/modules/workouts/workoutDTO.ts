@@ -8,6 +8,7 @@ import {
     AiFeedbackWrapper,
     TreinoAI,
     PlanoSemanalAI,
+    PlanoMensalAI,
     // Schemas
     FaseTreinoSchema,
     SerieIntervaloSchema,
@@ -16,6 +17,7 @@ import {
     WorkoutStructureSchema,
     TreinoAISchema,
     PlanoSemanalAISchema,
+    PlanoMensalAISchema,
     AiFeedbackWrapperSchema
 } from "../../shared/schemas";
 
@@ -26,13 +28,15 @@ export type {
     FasePrincipal, 
     FasesTreino,
     TreinoAI,
-    PlanoSemanalAI 
+    PlanoSemanalAI,
+    PlanoMensalAI 
 };
 
 // Re-export schemas
 export { 
     TreinoAISchema as TreinoAiSchema, 
-    PlanoSemanalAISchema as PlanoSemanalSchema 
+    PlanoSemanalAISchema as PlanoSemanalSchema,
+    PlanoMensalAISchema as PlanoMensalSchema
 };
 
 /**

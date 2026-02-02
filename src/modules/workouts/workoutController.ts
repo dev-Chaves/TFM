@@ -2,7 +2,7 @@ import { Context } from "hono";
 import { z } from "zod";
 import workoutService from "./workoutService";
 import { DashboardItem } from "./workoutDTO";
-import { PlanoSemanalAISchema, PlanoSemanalAI } from "../../shared/schemas";
+import { PlanoMensalAISchema, PlanoMensalAI } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 
 const log = createLogger("WorkoutController");
@@ -10,7 +10,7 @@ const log = createLogger("WorkoutController");
 /**
  * Schema para validar o payload de criação de workout
  */
-const SaveWorkoutRequestSchema = PlanoSemanalAISchema;
+const SaveWorkoutRequestSchema = PlanoMensalAISchema;
 
 /**
  * Response types
@@ -46,7 +46,7 @@ const workoutController = {
             return c.json<ErrorResponse>({error: "Payload inválido"}, 400);
         }
 
-        const workoutData: PlanoSemanalAI = parseResult.data;
+        const workoutData: PlanoMensalAI = parseResult.data;
         
         try {    
             await workoutService.saveWorkout(userId, workoutData);

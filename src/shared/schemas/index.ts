@@ -216,6 +216,30 @@ export const PlanoSemanalAISchema = z.object({
 
 export type PlanoSemanalAI = z.infer<typeof PlanoSemanalAISchema>;
 
+/**
+ * Schema para uma semana dentro do plano mensal
+ */
+export const SemanaAISchema = z.object({
+    numero_semana: z.number(),
+    resumo_semana: z.string(),
+    foco_semana: z.array(z.string()),
+    treinos: z.array(TreinoAISchema),
+});
+
+export type SemanaAI = z.infer<typeof SemanaAISchema>;
+
+/**
+ * Schema para plano mensal gerado pela IA
+ */
+export const PlanoMensalAISchema = z.object({
+    objetivo_mensal: z.string(),
+    mensagem_coach: z.string(),
+    semanas: z.array(SemanaAISchema),
+});
+
+export type PlanoMensalAI = z.infer<typeof PlanoMensalAISchema>;
+
+
 // =============================================================================
 // ACTIVITY ENTITY SCHEMA (Para tipagem do retorno do banco de dados)
 // =============================================================================

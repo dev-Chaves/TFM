@@ -1,4 +1,4 @@
-import Groq from "groq-sdk";
+import { generateCompletion } from "./aiProvider";
 import userRepository from "../users/userRepository";
 import activityRepository from "../activities/activityRepository";
 import { calculatePace, formatActivyForAI } from "./aiFormatter";
@@ -8,23 +8,22 @@ import {
     StravaSplitMetric, 
     WorkoutStructure,
     PlanoSemanalAI,
+    PlanoMensalAI,
+    SemanaAI,
     TreinoAI 
 } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 
 const log = createLogger("AIService");
 
-/**
- * Response type for workout plan generation
- */
 export interface GenerateWorkoutPlanResponse {
     message: string;
     resumo: string;
     objetivo?: string;
-    treinos: TreinoAI[];
+    semanas: SemanaAI[];
 }
 
-const groq = new Groq({apiKey: process.env.GROQ_API_KEY});
+
 
 const aiService = {
 
@@ -42,7 +41,7 @@ const aiService = {
             throw new Error("Usuário não encontrado");
         }
 
-        const recentActivities = await activityRepository.getLastActivities(userId, 5);
+        const recentActivities = await activityRepository.getLastActivities(userId, 15);
 
         const historyContext = recentActivities.map(a => formatActivyForAI(a.rawData as StravaActivity)).map(a => 
             `- Data: ${a.data}, Tipo: ${a.tipo}, Dist: ${a.distancia_km}, Tempo: ${a.tempo_movimento}, Pace: ${a.pace_medio}, FC: ${a.frequencia_cardiaca}`
@@ -59,7 +58,12 @@ const aiService = {
 Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de experiência.
 
 🏃 FILOSOFIA DE TREINO:
-- Periodização inteligente: alternância de estímulos para evolução constante
+- Periodização inteligente: alternância de estímulos para evolução constante.
+- Plano de QUATRO SEMANAS:
+    - Semana 1: Base/Adaptação
+    - Semana 2: Carga/Intensidade
+    - Semana 3: Pico/Volume
+    - Semana 4: Recuperação/Polimento (Tapering)
 - Regra dos 10%: nunca aumentar volume semanal mais que 10%
 - 80/20: 80% em baixa intensidade, 20% em alta intensidade
 - Recuperação é parte do treino: dias leves são tão importantes quanto os fortes
@@ -82,7 +86,7 @@ Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de
 `;
 
         const userPrompt = `
-🎯 MISSÃO: Crie um plano de treino semanal personalizado para este atleta.
+🎯 MISSÃO: Crie um plano de treino MENSAL (4 semanas) personalizado para este atleta.
 
 ════════════════════════════════════════
 📊 PERFIL DO ATLETA
@@ -108,70 +112,37 @@ ${historyContext || "Sem histórico disponível - atleta novo, seja conservador 
 ════════════════════════════════════════
 📝 INSTRUÇÕES DE GERAÇÃO
 ════════════════════════════════════════
-1. Analise o pace médio recente para definir paces realistas
-2. Gere exatamente ${goal.weeklyFrequency} treinos numerados sequencialmente (dia: 1, 2, 3...)
-3. Dia 1 = amanhã, Dia 2 = depois de amanhã, etc.
-4. Varie os tipos de treino para desenvolvimento completo
-5. Para INTERVALADOS, detalhe cada série com precisão
-6. Inclua dicas práticas de execução
+1. Analise o pace médio recente para definir paces realistas.
+2. Gere exatamente 4 SEMANAS de treinos.
+3. Cada semana deve ter exatamente ${goal.weeklyFrequency} treinos.
+4. Aplique periodização: adapte o volume e intensidade progressivamente em 3 semanas, com a 4ª sendo de recuperação.
+5. Para INTERVALADOS, detalhe cada série com precisão.
 
 ════════════════════════════════════════
 📤 FORMATO DE SAÍDA (JSON EXATO)
 ════════════════════════════════════════
 {
-    "resumo_semana": "Texto curto explicando o foco da semana (2-3 frases)",
-    "objetivo": "Meta do atleta reescrita de forma motivadora",
-    "mensagem_coach": "Mensagem pessoal e motivadora para o atleta (use o nome se disponível)",
-    "foco_semana": ["Palavra-chave 1", "Palavra-chave 2"],
-    "treinos": [
+    "objetivo_mensal": "Meta de longo prazo (mês)",
+    "mensagem_coach": "Mensagem motivadora geral para o mês",
+    "semanas": [
         {
-            "dia": 1,
-            "tipo": "Intervalado",
-            "titulo": "🔥 Tiros de Velocidade 400m",
-            "objetivo_sessao": "Desenvolver velocidade e economia de corrida",
-            "distancia_total_km": 6,
-            "tempo_estimado_min": 45,
-            "fases": {
-                "aquecimento": {
-                    "duracao_min": 10,
-                    "descricao": "Trote leve para ativar o corpo",
-                    "pace_sugerido": "7:00-7:30 min/km",
-                    "intensidade": "Leve"
-                },
-                "principal": {
-                    "tipo_estrutura": "intervalado",
-                    "descricao_geral": "5 repetições de 400m em ritmo forte",
-                    "series": [
-                        {
-                            "repeticoes": 5,
-                            "distancia_m": 400,
-                            "pace_alvo": "4:30 min/km",
-                            "descanso_tipo": "trote",
-                            "descanso_duracao": "90 segundos"
-                        }
-                    ],
-                    "como_executar": [
-                        "1️⃣ Posicione-se em local plano",
-                        "2️⃣ Acelere progressivamente nos primeiros 100m",
-                        "3️⃣ Mantenha o ritmo constante no meio",
-                        "4️⃣ Foque na técnica nos últimos 100m",
-                        "5️⃣ Recupere com trote leve entre as séries"
-                    ]
-                },
-                "desaquecimento": {
-                    "duracao_min": 10,
-                    "descricao": "Trote muito leve + alongamento",
-                    "pace_sugerido": "8:00+ min/km",
-                    "intensidade": "Muito Leve"
+            "numero_semana": 1,
+            "resumo_semana": "Foco da semana 1",
+            "foco_semana": ["Base", "Adaptação"],
+            "treinos": [
+                {
+                    "dia": 1,
+                    "tipo": "Rodagem",
+                    "titulo": "✨ Início Leve",
+                    "objetivo_sessao": "Adaptação inicial",
+                    "distancia_total_km": 5,
+                    "tempo_estimado_min": 35,
+                    "fases": { ... mesma estrutura de fases ... },
+                    "dicas_execucao": [...],
+                    "sensacao_esperada": "...",
+                    "descricao_completa": "..."
                 }
-            },
-            "dicas_execucao": [
-                "Hidrate-se antes do treino",
-                "Use tênis com boa resposta",
-                "Se sentir dor, interrompa"
-            ],
-            "sensacao_esperada": "Você deve terminar ofegante nos tiros, mas recuperar durante o descanso",
-            "descricao_completa": "Aquecimento 10min + 5x400m (4:30) c/ 90s trote + Desaquecimento 10min"
+            ]
         }
     ]
 }
@@ -180,33 +151,25 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
 `;
 
 
-        const completion = await groq.chat.completions.create({
+        const aiContent = await generateCompletion({
             messages: [
                 {role: "system", content: systemPrompt},
                 {role: "user", content: userPrompt}
             ],
-            model: "llama-3.3-70b-versatile",
-            response_format: {type: "json_object"},
+            jsonMode: true
         });
 
-        const aiContent = completion.choices[0].message.content;
+        const plan: PlanoMensalAI = JSON.parse(aiContent);
 
-        if(!aiContent) {
-            log.error({ userId }, "Resposta da IA vazia");
-            throw new Error("Resposta da IA inválida");
-        }
-
-        const plan: PlanoSemanalAI = JSON.parse(aiContent);
-
-        log.info({ userId, treinosCount: plan.treinos.length }, "Plano de treino gerado com sucesso");
+        log.info({ userId, semanasCount: plan.semanas.length }, "Plano de treino mensal gerado com sucesso");
 
         await workoutService.saveWorkout(userId, plan);
 
         return {
-            message: "Plano de treino gerado com sucesso.",
-            resumo: plan.resumo_semana,
-            objetivo: plan.objetivo,
-            treinos: plan.treinos
+            message: "Plano de treino mensal gerado com sucesso.",
+            resumo: plan.objetivo_mensal,
+            objetivo: plan.objetivo_mensal,
+            semanas: plan.semanas
         }
 
     },
@@ -308,18 +271,13 @@ Analise se o atleta manteve consistência no ritmo e se cumpriu o objetivo do tr
 
         
         try {
-            const completion = await groq.chat.completions.create({
+            const content = await generateCompletion({
                 messages: [
                     {role: "system", content: systemPrompt},
                     {role: "user", content: userPrompt}
                 ],
-                model: "llama-3.3-70b-versatile",
-                response_format: { type: "json_object" }, // Importante: Força o JSON
+                jsonMode: true
             });
-
-            const content = completion.choices[0].message.content;
-
-            if(!content) throw new Error("Resposta da IA vazia");
 
             const aiFeedback = JSON.parse(content);
 
