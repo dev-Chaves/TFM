@@ -50,6 +50,11 @@ const aiService = {
             throw new Error("Usuário não encontrado");
         }
 
+        if(user?.currentGoal == null) {
+            log.warn({ userId }, "Usuário não possui metas");
+            throw new Error("Usuário não possui metas, cadastre uma meta para gerar um plano de treino.");
+        }
+
         const recentActivities = await activityRepository.getLastActivities(userId, 15);
 
         const historyContext = recentActivities.map(a => formatActivyForAI(a.rawData as StravaActivity)).map(a => 
@@ -87,12 +92,23 @@ Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de
 
 ⚠️ REGRAS OBRIGATÓRIAS:
 - Sistema métrico (km, min/km)
-- Paces AEALISTAS mas DESAFIADORES (sobrecarga progressiva) baseados no histórico.
+- Paces REALISTAS mas DESAFIADORES (sobrecarga progressiva) baseados no histórico.
 - PRECISÃO DE PACE: Para CADA km ou bloco (segmento), você DEVE preencher \`pace_alvo\` e \`zona_fc\`.
 - OBRIGATÓRIO: Use o campo \`segmentos\` na fase principal para listar a estratégia km a km (ou por blocos lógicos).
 - ZONAS DE FC: Indique OBRIGATORIAMENTE a zona de frequência cardíaca (Z1-Z5) para cada segmento ou série.
 - Cada treino DEVE ter: aquecimento, parte principal e desaquecimento devidamente separados.
-- Intervalados SEMPRE especificam: repetições, distância, pace exato, zona alvo e tipo de descanso.
+
+🏃 REGRAS PARA INTERVALADOS (OBRIGATÓRIO):
+- Use o campo \`series\` na fase principal para treinos intervalados.
+- Cada série DEVE conter:
+  - \`repeticoes\`: Número de repetições (ex: 6)
+  - \`distancia_m\`: Distância em metros (ex: 800)
+  - \`pace_alvo\`: Pace objetivo do tiro (ex: "4:30")
+  - \`zona_fc\`: Zona de FC durante o tiro (ex: "Z4")
+  - \`descanso_tipo\`: Tipo de recuperação entre tiros - use EXATAMENTE um destes: "parado", "trote" ou "caminhada"
+  - \`descanso_duracao\`: Tempo ou distância de descanso (ex: "90s", "200m", "2min")
+- Descreva no \`como_executar\` instruções claras sobre o descanso.
+
 - Tom motivador e pessoal (use "você", seja encorajador).
 - Responda EXCLUSIVAMENTE em formato JSON válido.
 `;
@@ -166,6 +182,40 @@ ${historyContext || "Sem histórico disponível - atleta novo, seja conservador 
                     },
                     "dicas_execucao": [...],
                     "sensacao_esperada": "...",
+                    "descricao_completa": "..."
+                },
+                {
+                    "dia": 3,
+                    "tipo": "Intervalado",
+                    "titulo": "🔥 Tiros 800m",
+                    "objetivo_sessao": "Desenvolver velocidade e VO2max",
+                    "distancia_total_km": 7,
+                    "tempo_estimado_min": 45,
+                    "fases": {
+                        "aquecimento": { "duracao_min": 15, "descricao": "Trote progressivo + educativos", "pace_sugerido": "6:00", "intensidade": "Leve" },
+                        "principal": {
+                            "tipo_estrutura": "intervalado",
+                            "descricao_geral": "6x800m com recuperação ativa",
+                            "series": [
+                                {
+                                    "repeticoes": 6,
+                                    "distancia_m": 800,
+                                    "pace_alvo": "4:15",
+                                    "zona_fc": "Z4",
+                                    "descanso_tipo": "trote",
+                                    "descanso_duracao": "200m em trote leve (Z1)"
+                                }
+                            ],
+                            "como_executar": [
+                                "Após cada tiro de 800m, faça 200m de trote leve (não pare totalmente)",
+                                "Use o trote para recuperar a respiração antes do próximo tiro",
+                                "Mantenha o pace consistente em todos os tiros"
+                            ]
+                        },
+                        "desaquecimento": { "duracao_min": 10, "descricao": "Trote leve + alongamento", "pace_sugerido": "6:30", "intensidade": "Muito leve" }
+                    },
+                    "dicas_execucao": ["Não arranque forte demais no primeiro tiro", "Hidrate-se entre as séries"],
+                    "sensacao_esperada": "Respiração intensa durante os tiros, mas recuperável no descanso",
                     "descricao_completa": "..."
                 }
             ]
