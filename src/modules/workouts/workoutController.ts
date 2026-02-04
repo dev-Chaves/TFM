@@ -73,6 +73,7 @@ const workoutController = {
 
         try {
             const response: DashboardItem[] = await workoutService.getDashboardData(userId);
+            c.header("Cache-Control", "private, max-age=300");
             return c.json(response);
         } catch (error) {
             log.error({ userId, error: error instanceof Error ? error.message : error }, "Erro ao buscar dados do dashboard");
