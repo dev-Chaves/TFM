@@ -54,7 +54,7 @@ const authController = {
 
             log.info({ userId: response.id, firstLogin: response.first_login }, "JWT gerado, redirecionando para dashboard");
 
-            return c.redirect(`${FRONTEND_URL}/dashboard?token=${token}&fistLogin?=${response.first_login}`);
+            return c.redirect(`${FRONTEND_URL}/dashboard?token=${token}&firstLogin=${response.first_login}`);
 
         } catch (err) {
             log.error({ error: err instanceof Error ? err.message : err }, "Erro no fluxo de autenticação");
