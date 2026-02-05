@@ -1,6 +1,6 @@
 import { Context } from "hono";
 import aiService from "./aiService";
-import { TreinoAI } from "../../shared/schemas";
+import { SemanaAI } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 
 const log = createLogger("AIController");
@@ -17,7 +17,7 @@ interface GenerateWorkoutSuccessResponse {
     message: string;
     resumo: string;
     objetivo?: string;
-    treinos: TreinoAI[];
+    semanas: SemanaAI[];
 }
 
 interface ErrorResponse {

@@ -61,12 +61,12 @@ const aiService = {
             `- Data: ${a.data}, Tipo: ${a.tipo}, Dist: ${a.distancia_km}, Tempo: ${a.tempo_movimento}, Pace: ${a.pace_medio}, FC: ${a.frequencia_cardiaca}`
         ).join("\n");
 
-        const goal = user.currentGoal || {
-            targetDistanceKm: 5,
-            weeklyFrequency: 3,
-            experienceLevel: "beginner",
-            text: "Melhorar saúde"
+        if(user.currentGoal == null || user.currentGoal == undefined) {
+            log.warn({ userId }, "Usuário não possui metas");
+            throw new Error("Usuário não possui metas, cadastre uma meta para gerar um plano de treino.");
         }
+
+        const goal = user.currentGoal;
 
         const systemPrompt = `
 Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de experiência.

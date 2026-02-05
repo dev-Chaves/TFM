@@ -20,6 +20,8 @@ const activityController = {
      */
     async getActivities(c: Context): Promise<Response> {
         const id = Number(c.get("userId"));
+
+        c.header("Cache-Control", "private, max-age=300");
         
         if(Number.isNaN(id)) {
             return c.json<ErrorResponse>({erro: `ID Inválido`}, 400);
