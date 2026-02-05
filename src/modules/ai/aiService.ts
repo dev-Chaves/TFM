@@ -55,6 +55,13 @@ const aiService = {
             throw new Error("Usuário não possui metas, cadastre uma meta para gerar um plano de treino.");
         }
 
+        // Valida se o usuário tem dias disponíveis configurados ANTES de chamar a IA
+        const availableDays = user.currentGoal?.availableDays;
+        if (!availableDays || availableDays.length === 0) {
+            log.warn({ userId }, "Usuário sem dias disponíveis configurados");
+            throw new Error("Por favor, configure seus dias de treino disponíveis antes de gerar um plano.");
+        }
+
         const recentActivities = await activityRepository.getLastActivities(userId, 15);
 
         const historyContext = recentActivities.map(a => formatActivyForAI(a.rawData as StravaActivity)).map(a => 
