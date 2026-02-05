@@ -16,6 +16,7 @@ const log = createLogger("WorkoutService");
 
 // Função auxiliar para encontrar as próximas datas disponíveis
 // Se startAfterDate for passado, começa a buscar a partir do dia seguinte a essa data
+// IMPORTANTE: Nunca agenda treinos no passado - sempre começa a partir de hoje no mínimo
 function getNextAvailableDates(availableDays: DayOfWeek[], count: number, startAfterDate?: Date | null): Date[] {
     const dates: Date[] = [];
     const today = new Date();
@@ -25,9 +26,12 @@ function getNextAvailableDates(availableDays: DayOfWeek[], count: number, startA
     
     if (startAfterDate) {
         // Começa no dia seguinte à última data de treino
-        currentDate = new Date(startAfterDate);
-        currentDate.setHours(0, 0, 0, 0);
-        currentDate.setDate(currentDate.getDate() + 1);
+        const nextDay = new Date(startAfterDate);
+        nextDay.setHours(0, 0, 0, 0);
+        nextDay.setDate(nextDay.getDate() + 1);
+        
+        // Garante que nunca começa antes de hoje (evita agendar treinos no passado)
+        currentDate = nextDay > today ? nextDay : new Date(today);
     } else {
         // Sem treinos anteriores: começa a partir de hoje
         currentDate = new Date(today);
