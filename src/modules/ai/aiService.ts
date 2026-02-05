@@ -35,12 +35,12 @@ const aiService = {
 
         log.info({ userId }, "Iniciando geração de plano de treino");
 
-        // RATE LIMIT: Verifica se o usuário pode gerar treino (1 a cada 24h)
-        const check = canGenerateWorkout(userId);
+        // RATE LIMIT: Verifica se o usuário pode gerar treino (1 por mês, persistido no banco)
+        const check = await canGenerateWorkout(userId);
         if (!check.canGenerate) {
-            const hours = Math.ceil(check.remainingMs / (60 * 60 * 1000));
-            log.warn({ userId, remainingMs: check.remainingMs }, "Limite de geração atingido");
-            throw new Error(`Você já gerou um treino recentemente. Tente novamente em aproximadamente ${hours} horas.`);
+            const days = Math.ceil(check.remainingMs / (24 * 60 * 60 * 1000));
+            log.warn({ userId, remainingMs: check.remainingMs, nextAvailable: check.nextAvailableDate }, "Limite de geração mensal atingido");
+            throw new Error(`Você já gerou um treino este mês. Tente novamente em ${days} dias (a partir de ${check.nextAvailableDate?.toLocaleDateString('pt-BR')}).`);
         }
 
         const user = await userRepository.getUserById(userId);
@@ -241,8 +241,8 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
 
         await workoutService.saveWorkout(userId, plan);
 
-        // RATE LIMIT: Registra a tentativa após sucesso
-        recordGenerationAttempt(userId);
+        // RATE LIMIT: Registra a tentativa após sucesso (persiste no banco)
+        await recordGenerationAttempt(userId);
 
         return {
             message: "Plano de treino mensal gerado com sucesso.",

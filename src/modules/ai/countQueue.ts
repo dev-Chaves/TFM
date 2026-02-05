@@ -1,57 +1,66 @@
 import { createLogger } from "../../shared/utils/logger";
+import userRepository from "../users/userRepository";
 
 const log = createLogger("CountQueue");
 
 /**
- * Interface para controle de tentativas de geração
+ * Response type para verificação de rate limit
  */
-interface GenerationAttempt {
-    userId: number;
-    lastAttempt: Date;
+interface RateLimitCheck {
+    canGenerate: boolean;
+    remainingMs: number;
+    nextAvailableDate?: Date;
 }
 
 /**
- * Queue em memória para controle de frequência
- * Nota: Como é em memória, será resetada ao reiniciar o servidor.
- * TODO: Futuramente mover para o banco de dados (tabela users ou nova tabela).
- */
-const generationHistory = new Map<number, GenerationAttempt>();
-
-const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 horas
-
-/**
  * Verifica se o usuário pode gerar um novo treino
- * @returns { canGenerate: boolean, remainingMs: number }
+ * Limite: 1 geração por mês (persistido no banco de dados)
+ * 
+ * @returns { canGenerate: boolean, remainingMs: number, nextAvailableDate?: Date }
  */
-export function canGenerateWorkout(userId: number): { canGenerate: boolean; remainingMs: number } {
-    const attempt = generationHistory.get(userId);
+export async function canGenerateWorkout(userId: number): Promise<RateLimitCheck> {
+    const user = await userRepository.getUserById(userId);
 
-    if (!attempt) {
+    // Se não tem usuário ou nunca gerou, pode gerar
+    if (!user || !user.lastWorkoutGeneratedAt) {
         return { canGenerate: true, remainingMs: 0 };
     }
 
-    const now = new Date().getTime();
-    const lastAttemptTime = attempt.lastAttempt.getTime();
-    const elapsed = now - lastAttemptTime;
+    const lastGen = new Date(user.lastWorkoutGeneratedAt);
+    const now = new Date();
 
-    if (elapsed >= COOLDOWN_MS) {
-        return { canGenerate: true, remainingMs: 0 };
+    // Verifica se está no mesmo mês e ano
+    const sameMonth = lastGen.getMonth() === now.getMonth();
+    const sameYear = lastGen.getFullYear() === now.getFullYear();
+
+    if (sameMonth && sameYear) {
+        // Calcula início do próximo mês
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const remainingMs = nextMonth.getTime() - now.getTime();
+
+        log.debug({ 
+            userId, 
+            lastGen: lastGen.toISOString(),
+            nextAvailable: nextMonth.toISOString(),
+            remainingMs 
+        }, "Rate limit ativo - usuário já gerou treino este mês");
+
+        return { 
+            canGenerate: false, 
+            remainingMs,
+            nextAvailableDate: nextMonth
+        };
     }
 
-    return { 
-        canGenerate: false, 
-        remainingMs: COOLDOWN_MS - elapsed 
-    };
+    // Mês diferente, pode gerar
+    return { canGenerate: true, remainingMs: 0 };
 }
 
 /**
  * Registra uma tentativa bem-sucedida de geração
+ * Persiste no banco de dados para sobreviver a reinícios
  */
-export function recordGenerationAttempt(userId: number): void {
-    generationHistory.set(userId, {
-        userId,
-        lastAttempt: new Date()
-    });
-    
-    log.info({ userId }, "Tentativa de geração registrada");
+export async function recordGenerationAttempt(userId: number): Promise<void> {
+    await userRepository.updateLastWorkoutGeneratedAt(userId);
+    log.info({ userId }, "Tentativa de geração registrada no banco de dados");
 }
