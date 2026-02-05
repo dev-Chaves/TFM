@@ -18,6 +18,8 @@ const log = createLogger("WorkoutService");
 // Se startAfterDate for passado, começa a buscar a partir do dia seguinte a essa data
 // IMPORTANTE: Nunca agenda treinos no passado - sempre começa a partir de hoje no mínimo
 function getNextAvailableDates(availableDays: DayOfWeek[], count: number, startAfterDate?: Date | null): Date[] {
+    log.debug({ availableDays, count, startAfterDate }, "getNextAvailableDates - entrada");
+    
     const dates: Date[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -32,26 +34,43 @@ function getNextAvailableDates(availableDays: DayOfWeek[], count: number, startA
         
         // Garante que nunca começa antes de hoje (evita agendar treinos no passado)
         currentDate = nextDay > today ? nextDay : new Date(today);
+        log.debug({ nextDay, today, currentDate }, "getNextAvailableDates - usando startAfterDate");
     } else {
         // Sem treinos anteriores: começa a partir de hoje
         currentDate = new Date(today);
+        log.debug({ currentDate }, "getNextAvailableDates - sem startAfterDate, começando de hoje");
     }
     
+    let iterations = 0;
     while (dates.length < count) {
         const dayOfWeek = currentDate.getDay() as DayOfWeek;
+        const isIncluded = availableDays.includes(dayOfWeek);
         
-        if (availableDays.includes(dayOfWeek)) {
+        if (iterations < 10) {
+            log.debug({ 
+                currentDate: currentDate.toISOString(), 
+                dayOfWeek, 
+                isIncluded,
+                availableDaysType: typeof availableDays,
+                availableDaysContent: JSON.stringify(availableDays)
+            }, "getNextAvailableDates - verificando dia");
+        }
+        
+        if (isIncluded) {
             dates.push(new Date(currentDate));
         }
         
         currentDate.setDate(currentDate.getDate() + 1);
+        iterations++;
         
         // Segurança: máximo 60 dias no futuro
         if (dates.length === 0 && currentDate.getTime() - today.getTime() > 60 * 24 * 60 * 60 * 1000) {
+            log.error({ availableDays, iterations, today, currentDate }, "getNextAvailableDates - timeout 60 dias");
             throw new Error("Não foi possível encontrar dias disponíveis nos próximos 60 dias");
         }
     }
     
+    log.debug({ datesCount: dates.length }, "getNextAvailableDates - sucesso");
     return dates;
 }
 
