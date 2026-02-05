@@ -1,4 +1,6 @@
 import aiService from "./aiService";
+import activityService from "../activities/activityService";
+import activityRepository from "../activities/activityRepository";
 import { StravaActivity, WorkoutStructure } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 
@@ -29,6 +31,7 @@ const RETRY_DELAYS_MS = [30000, 60000, 120000]; // 30s, 1min, 2min
 
 /**
  * Adiciona geração de feedback à queue com retry automático
+ * Enriquece atividade com dados detalhados (splits) antes de gerar feedback
  * Em caso de falha, tenta novamente até MAX_RETRIES vezes
  */
 export async function queueFeedbackGeneration(
@@ -50,7 +53,19 @@ export async function queueFeedbackGeneration(
     try {
         log.info({ workoutId, attempt: pending.attempts + 1 }, "Gerando feedback de treino");
         
-        await aiService.generateWorkoutFeedback(userId, workoutId, planned, actual);
+        // LAZY FETCH: Busca dados detalhados se não tiver splits
+        let enrichedActivity = actual;
+        const dbActivity = await activityRepository.getActivityByStravaId(userId, actual.id);
+        
+        if (dbActivity) {
+            enrichedActivity = await activityService.enrichActivityData(
+                userId, 
+                actual, 
+                dbActivity.id
+            );
+        }
+        
+        await aiService.generateWorkoutFeedback(userId, workoutId, planned, enrichedActivity);
         
         // Sucesso: remove da queue
         pendingQueue.delete(workoutId);

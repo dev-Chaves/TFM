@@ -290,6 +290,110 @@ const activityService = {
         log.debug({ userId }, "Buscando atividades do usuário");
         const rawActivities = await activityRepository.getLastActivities(userId);
         return rawActivities.map((activity) => toActivityResponseDTO(activity as ActivityEntity));
+    },
+
+    /**
+     * Busca detalhes completos de uma atividade via Strava API
+     * Endpoint: GET /activities/{id}
+     * Retorna dados enriquecidos incluindo splits_metric, laps, segment_efforts, etc.
+     */
+    async fetchActivityDetails(userId: number, stravaActivityId: number): Promise<StravaActivity | null> {
+        
+        log.info({ userId, stravaActivityId }, "Buscando detalhes da atividade no Strava");
+
+        const user = await userRepository.getUserById(userId);
+        
+        if (!user) {
+            log.warn({ userId }, "Usuário não encontrado para buscar detalhes");
+            return null;
+        }
+
+        const url = `https://www.strava.com/api/v3/activities/${stravaActivityId}`;
+
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${user.accessToken}`
+                }
+            });
+
+            if (!response.ok) {
+                log.error({ 
+                    status: response.status, 
+                    statusText: response.statusText,
+                    stravaActivityId 
+                }, "Erro ao buscar detalhes da atividade no Strava");
+                return null;
+            }
+
+            const rawData: unknown = await response.json();
+            
+            // Valida resposta com Zod (permissive para aceitar campos extras)
+            const parseResult = StravaActivitySchema.safeParse(rawData);
+            
+            let activityDetails: StravaActivity;
+            if (parseResult.success) {
+                activityDetails = parseResult.data;
+            } else {
+                log.warn({ 
+                    error: parseResult.error.message,
+                    stravaActivityId 
+                }, "Resposta detalhada não passou validação Zod, usando dados raw");
+                activityDetails = rawData as StravaActivity;
+            }
+
+            log.info({ 
+                stravaActivityId,
+                hasSplits: !!activityDetails.splits_metric,
+                splitsCount: activityDetails.splits_metric?.length ?? 0
+            }, "Detalhes da atividade obtidos com sucesso");
+
+            return activityDetails;
+
+        } catch (error) {
+            log.error({ 
+                stravaActivityId,
+                error: error instanceof Error ? error.message : error 
+            }, "Erro ao buscar detalhes da atividade");
+            return null;
+        }
+    },
+
+    /**
+     * Enriquece dados de uma atividade buscando detalhes se necessário
+     * Verifica se já tem splits_metric, se não, busca e salva no banco
+     */
+    async enrichActivityData(
+        userId: number, 
+        activity: StravaActivity, 
+        dbActivityId: number
+    ): Promise<StravaActivity> {
+        
+        // Se já tem splits, não precisa buscar novamente
+        if (activity.splits_metric && activity.splits_metric.length > 0) {
+            log.debug({ stravaActivityId: activity.id }, "Atividade já tem splits, pulando enriquecimento");
+            return activity;
+        }
+
+        log.info({ stravaActivityId: activity.id }, "Atividade sem splits, buscando detalhes");
+
+        const details = await this.fetchActivityDetails(userId, activity.id);
+
+        if (details) {
+            // Salva dados enriquecidos no banco
+            await activityRepository.updateActivityRawData(dbActivityId, details);
+            
+            log.info({ 
+                stravaActivityId: activity.id,
+                splitsCount: details.splits_metric?.length ?? 0 
+            }, "Detalhes salvos com splits_metric");
+
+            return details;
+        }
+
+        // Fallback: retorna dados originais
+        return activity;
     }
 
 }

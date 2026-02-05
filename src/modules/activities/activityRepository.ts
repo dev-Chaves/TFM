@@ -51,6 +51,27 @@ const activityRepository = {
             orderBy: (activities, {desc}) => [desc(activities.startDate)]
         });
         return result;
+    },
+
+    /**
+     * Atualiza rawData de uma atividade com dados detalhados do Strava
+     */
+    async updateActivityRawData(activityId: number, rawData: StravaActivity) {
+        await db.update(activities)
+            .set({ rawData })
+            .where(eq(activities.id, activityId));
+    },
+
+    /**
+     * Busca uma atividade pelo stravaActivityId
+     */
+    async getActivityByStravaId(userId: number, stravaActivityId: number) {
+        return await db.query.activities.findFirst({
+            where: (activities, { eq, and }) => and(
+                eq(activities.userId, userId),
+                eq(activities.stravaActivityId, stravaActivityId)
+            )
+        });
     }
 
 }
