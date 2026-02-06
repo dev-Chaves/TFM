@@ -59,10 +59,11 @@ const aiController = {
             return c.json<GenerateWorkoutSuccessResponse>(response);
 
         } catch(err) {
-            log.error({ userId, error: err instanceof Error ? err.message : err }, "Erro ao gerar plano de treino");
+            const errorMessage = err instanceof Error ? err.message : "Erro interno no servidor.";
+            log.error({ userId, error: errorMessage }, "Erro ao gerar plano de treino");
             return c.json<ErrorResponse>({
-                error: "Erro interno no servidor."
-            }, 500);
+                error: errorMessage
+            }, 400);
 
         } finally {
             // Liberar lock SEMPRE
