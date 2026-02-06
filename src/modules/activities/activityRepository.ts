@@ -37,7 +37,7 @@ const activityRepository = {
 
     },
 
-    async getLastActivities(userId: number, limit = 15) {
+    async getLastActivities(userId: number, limit = 30) {
         return await db.query.activities.findMany({
             where: eq(activities.userId, userId),
             orderBy: (activities, {desc}) => [desc(activities.startDate)],
