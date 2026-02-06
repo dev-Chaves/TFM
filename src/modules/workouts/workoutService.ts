@@ -1,3 +1,5 @@
+import {differenceInDays} from "date-fns";
+
 import { calculatePace } from "../ai/aiFormatter";
 import { DashboardItem, SaveWorkoutDTO, DashboardCoachFeedback } from "./workoutDTO";
 import workoutRepository from "./workoutRepository";
@@ -16,10 +18,7 @@ const log = createLogger("WorkoutService");
 
 // Função auxiliar para encontrar as próximas datas disponíveis
 // Se startAfterDate for passado, começa a buscar a partir do dia seguinte a essa data
-// IMPORTANTE: Nunca agenda treinos no passado - sempre começa a partir de hoje no mínimo
 function getNextAvailableDates(availableDays: DayOfWeek[], count: number, startAfterDate?: Date | null): Date[] {
-    log.debug({ availableDays, count, startAfterDate }, "getNextAvailableDates - entrada");
-    
     const dates: Date[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -28,49 +27,29 @@ function getNextAvailableDates(availableDays: DayOfWeek[], count: number, startA
     
     if (startAfterDate) {
         // Começa no dia seguinte à última data de treino
-        const nextDay = new Date(startAfterDate);
-        nextDay.setHours(0, 0, 0, 0);
-        nextDay.setDate(nextDay.getDate() + 1);
-        
-        // Garante que nunca começa antes de hoje (evita agendar treinos no passado)
-        currentDate = nextDay > today ? nextDay : new Date(today);
-        log.debug({ nextDay, today, currentDate }, "getNextAvailableDates - usando startAfterDate");
+        currentDate = new Date(startAfterDate);
+        currentDate.setHours(0, 0, 0, 0);
+        currentDate.setDate(currentDate.getDate() + 1);
     } else {
         // Sem treinos anteriores: começa a partir de hoje
         currentDate = new Date(today);
-        log.debug({ currentDate }, "getNextAvailableDates - sem startAfterDate, começando de hoje");
     }
     
-    let iterations = 0;
     while (dates.length < count) {
         const dayOfWeek = currentDate.getDay() as DayOfWeek;
-        const isIncluded = availableDays.includes(dayOfWeek);
         
-        if (iterations < 10) {
-            log.debug({ 
-                currentDate: currentDate.toISOString(), 
-                dayOfWeek, 
-                isIncluded,
-                availableDaysType: typeof availableDays,
-                availableDaysContent: JSON.stringify(availableDays)
-            }, "getNextAvailableDates - verificando dia");
-        }
-        
-        if (isIncluded) {
+        if (availableDays.includes(dayOfWeek)) {
             dates.push(new Date(currentDate));
         }
         
         currentDate.setDate(currentDate.getDate() + 1);
-        iterations++;
         
         // Segurança: máximo 60 dias no futuro
         if (dates.length === 0 && currentDate.getTime() - today.getTime() > 60 * 24 * 60 * 60 * 1000) {
-            log.error({ availableDays, iterations, today, currentDate }, "getNextAvailableDates - timeout 60 dias");
             throw new Error("Não foi possível encontrar dias disponíveis nos próximos 60 dias");
         }
     }
     
-    log.debug({ datesCount: dates.length }, "getNextAvailableDates - sucesso");
     return dates;
 }
 
@@ -85,12 +64,29 @@ const workoutService = {
             throw new Error("Plano de treino mensal inválido: Nenhuma semana encontrada.");
         };
 
-        // Busca a última data de treino agendado para adicionar os novos após essa data
-        const lastScheduledDate = await workoutRepository.getLastScheduledDate(userId);
-        
-        log.debug({ userId, lastScheduledDate }, "Última data de treino agendado");
-
         const user = await userRepository.getUserById(userId);
+
+        if(user?.currentGoal == null){
+            log.warn({ userId }, "Usuário sem meta configurada");
+            throw new Error("Por favor, configure sua meta antes de gerar um plano.");
+        }
+
+        // Rate limit: 21 dias entre gerações
+        if (user?.lastWorkoutGeneratedAt && differenceInDays(new Date(), user.lastWorkoutGeneratedAt) < 21) {
+            log.warn({ userId }, "Usuário deve esperar pelo menos 21 dias entre a geração de planos");
+            throw new Error("Você deve esperar pelo menos 21 dias entre a geração de planos");
+        }
+
+        // Deleta TODOS os treinos pendentes antes de gerar novos
+        // Treinos já concluídos (com feedback) são preservados
+        const deletedWorkouts = await workoutRepository.deletePendingWorkouts(userId);
+        if (deletedWorkouts.length > 0) {
+            log.info({ userId, deletedCount: deletedWorkouts.length }, "Treinos pendentes anteriores removidos");
+        }
+
+        // Atualiza timestamp após validações e antes de salvar
+        await userRepository.updateUserLastWorkoutGeneratedAt(userId);
+
         const availableDays = user?.currentGoal?.availableDays;
         
         if (!availableDays || availableDays.length === 0) {
@@ -98,8 +94,9 @@ const workoutService = {
             throw new Error("Por favor, configure seus dias de treino antes de gerar um plano.");
         }
 
-        const workoutsToSave: SaveWorkoutDTO[] = [];
-        let currentStartDate = lastScheduledDate;
+        const workoutsToSave: SaveWorkoutDTO[] = []; 
+        // Sempre começa de hoje, já que deletamos todos os pendentes
+        let currentStartDate: Date | null = null;
 
         for (const semana of aiPlan.semanas) {
             const treinosDaSemana = semana.treinos;

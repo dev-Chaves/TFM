@@ -19,15 +19,13 @@ const workoutRepository = {
         return null;
     },
 
-    // Deleta treinos pendentes (não concluídos) a partir de hoje
+    // Deleta TODOS os treinos pendentes (não concluídos) do usuário
+    // Treinos concluídos são preservados para manter o histórico e feedback
     async deletePendingWorkouts(userId: number) {
-        const today = new Date().toISOString().split('T')[0];
-        
         const deleted = await db.delete(workouts)
             .where(and(
                 eq(workouts.userId, userId),
-                isNull(workouts.completedActivityId), // Não foi feito
-                gte(workouts.scheduleDate, today)     // Data >= hoje
+                isNull(workouts.completedActivityId)
             ))
             .returning();
         

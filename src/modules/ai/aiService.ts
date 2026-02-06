@@ -35,12 +35,12 @@ const aiService = {
 
         log.info({ userId }, "Iniciando geração de plano de treino");
 
-        // RATE LIMIT: Verifica se o usuário pode gerar treino (1 por mês, persistido no banco)
-        const check = await canGenerateWorkout(userId);
+        // RATE LIMIT: Verifica se o usuário pode gerar treino (1 a cada 24h)
+        const check = canGenerateWorkout(userId);
         if (!check.canGenerate) {
-            const days = Math.ceil(check.remainingMs / (24 * 60 * 60 * 1000));
-            log.warn({ userId, remainingMs: check.remainingMs, nextAvailable: check.nextAvailableDate }, "Limite de geração mensal atingido");
-            throw new Error(`Você já gerou um treino este mês. Tente novamente em ${days} dias (a partir de ${check.nextAvailableDate?.toLocaleDateString('pt-BR')}).`);
+            const hours = Math.ceil(check.remainingMs / (60 * 60 * 1000));
+            log.warn({ userId, remainingMs: check.remainingMs }, "Limite de geração atingido");
+            throw new Error(`Você já gerou um treino recentemente. Tente novamente em aproximadamente ${hours} horas.`);
         }
 
         const user = await userRepository.getUserById(userId);
@@ -53,13 +53,6 @@ const aiService = {
         if(user?.currentGoal == null) {
             log.warn({ userId }, "Usuário não possui metas");
             throw new Error("Usuário não possui metas, cadastre uma meta para gerar um plano de treino.");
-        }
-
-        // Valida se o usuário tem dias disponíveis configurados ANTES de chamar a IA
-        const availableDays = user.currentGoal?.availableDays;
-        if (!availableDays || availableDays.length === 0) {
-            log.warn({ userId }, "Usuário sem dias disponíveis configurados");
-            throw new Error("Por favor, configure seus dias de treino disponíveis antes de gerar um plano.");
         }
 
         const recentActivities = await activityRepository.getLastActivities(userId, 15);
@@ -248,8 +241,8 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
 
         await workoutService.saveWorkout(userId, plan);
 
-        // RATE LIMIT: Registra a tentativa após sucesso (persiste no banco)
-        await recordGenerationAttempt(userId);
+        // RATE LIMIT: Registra a tentativa após sucesso
+        recordGenerationAttempt(userId);
 
         return {
             message: "Plano de treino mensal gerado com sucesso.",

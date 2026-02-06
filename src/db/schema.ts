@@ -26,7 +26,6 @@ export const users = pgTable("users", {
 
     firstLogin: boolean("first_login").default(true),
 
-    // Rate limit: última vez que o usuário gerou um plano de treino
     lastWorkoutGeneratedAt: timestamp("last_workout_generated_at", { mode: "date" }),
 
     createdAt: timestamp("created_at").defaultNow()

@@ -87,10 +87,7 @@ const userRepository = {
         }).where(eq(users.id, userId));
     },
 
-    /**
-     * Atualiza a data da última geração de treino (rate limit)
-     */
-    async updateLastWorkoutGeneratedAt(userId: number): Promise<void> {
+    async updateUserLastWorkoutGeneratedAt(userId: number): Promise<void> {
         await db.update(users).set({
             lastWorkoutGeneratedAt: new Date()
         }).where(eq(users.id, userId));
