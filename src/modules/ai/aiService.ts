@@ -14,6 +14,7 @@ import {
 } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 import { canGenerateWorkout, recordGenerationAttempt } from "./countQueue";
+import { differenceInDays } from "date-fns";
 
 const log = createLogger("AIService");
 
@@ -53,6 +54,12 @@ const aiService = {
         if(user?.currentGoal == null) {
             log.warn({ userId }, "Usuário não possui metas");
             throw new Error("Usuário não possui metas, cadastre uma meta para gerar um plano de treino.");
+        }
+
+        // Rate limit: 21 dias entre gerações
+        if (user?.lastWorkoutGeneratedAt && differenceInDays(new Date(), user.lastWorkoutGeneratedAt) < 21) {
+            log.warn({ userId }, "Usuário deve esperar pelo menos 21 dias entre a geração de planos");
+            throw new Error("Você deve esperar pelo menos 21 dias entre a geração de planos");
         }
 
         const recentActivities = await activityRepository.getLastActivities(userId, 15);

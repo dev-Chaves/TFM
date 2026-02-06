@@ -26,24 +26,34 @@ const authService = {
         log.info("Iniciando troca de código por token");
 
         try {
-            const tokenResponse = await fetch(`https://www.strava.com/oauth/token`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    client_id: process.env.CLIENT_ID,
-                    client_secret: process.env.CLIENT_SECRET,
-                    code: code,
-                    grant_type: "authorization_code"
-                }),
+            const params = new URLSearchParams({
+                client_id: process.env.CLIENT_ID || "",
+                client_secret: process.env.CLIENT_SECRET || "",
+                code: code,
+                grant_type: "authorization_code"
             });
 
-            const rawData: unknown = await tokenResponse.json();
+            const tokenResponse = await fetch(`https://www.strava.com/oauth/token?${params.toString()}`, {
+                method: "POST"
+            });
 
-            // Verifica erros na resposta
+            if (!tokenResponse.ok) {
+                const errorText = await tokenResponse.text();
+                log.error({ status: tokenResponse.status, body: errorText }, "Erro na resposta do Strava (non-200)");
+                throw new Error(`Erro na API do Strava: ${tokenResponse.status} - ${errorText}`);
+            }
+
+            let rawData: unknown;
+            try {
+                rawData = await tokenResponse.json();
+            } catch (jsonError) {
+                log.error({ error: jsonError }, "Falha ao fazer parse do JSON da resposta do Strava");
+                throw new Error("Resposta inválida do Strava (não é JSON).");
+            }
+
+            // Verifica erros na resposta (caso o API retorne 200 OK mas com erro no corpo, embora raro para OAuth)
             if (typeof rawData === 'object' && rawData !== null && 'errors' in rawData) {
-                log.error({ errors: rawData }, "Erro na resposta do Strava");
+                log.error({ errors: rawData }, "Erro na resposta do Strava (campo errors presente)");
                 throw new Error("Erro ao trocar o código pelo token.");
             }
 
