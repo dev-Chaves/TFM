@@ -20,8 +20,6 @@ const activityController = {
      */
     async getActivities(c: Context): Promise<Response> {
         const id = Number(c.get("userId"));
-
-        c.header("Cache-Control", "private, max-age=300");
         
         if(Number.isNaN(id)) {
             return c.json<ErrorResponse>({erro: `ID Inválido`}, 400);
@@ -29,6 +27,14 @@ const activityController = {
 
         try {
             const activities: ActivityResponseDTO[] = await activityService.getActivities(id);
+
+            if(activities.length === 0){
+                c.header("Cache-Control", "no-store");
+                return c.json(activities);
+            }
+
+            c.header("Cache-Control", "private, max-age=60");
+
             return c.json(activities);
         } catch (err) {
             log.error({ userId: id, error: err instanceof Error ? err.message : err }, "Erro ao buscar atividades");
