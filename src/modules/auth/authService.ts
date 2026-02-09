@@ -74,9 +74,12 @@ const authService = {
 
             const user = await userRepository.saveUser(athlete, access_token, refresh_token, expires_at);
 
-            const isFirstLogin: string = user.firstLogin 
-                ? "true" 
-                : await userService.updateUserFirstLoginToFalse(user.id);
+            const isFirstLogin: string = user.firstLogin ? "true" : "false";
+            
+            // Se é o primeiro login, marca no banco que não é mais primeiro login para a próxima vez
+            if (user.firstLogin) {
+                await userService.updateUserFirstLoginToFalse(user.id);
+            }
 
             log.info({ userId: user.id, firstLogin: isFirstLogin }, "Usuário salvo/atualizado no banco");
 
