@@ -1,6 +1,10 @@
 import userService from "./userService";
 import { Context } from "hono";
 import { DayOfWeek, GoalConfig } from "../../shared/schemas";
+import aiService from "../ai/aiService";
+import { createLogger } from "../../shared/utils/logger";
+
+const log = createLogger("UserController");
 
 // =============================================
 // Tipos para o payload do Frontend
@@ -95,8 +99,13 @@ const userController = {
         
         try{    
             await userService.updateGoal(userId, goalData);
+
+            // Fire-and-forget: gera o plano de treino em background
+            aiService.generateWorkoutPlan(userId)
+                .then(() => log.info({ userId }, "Plano de treino gerado automaticamente após cadastro de meta"))
+                .catch((err) => log.warn({ userId, error: err instanceof Error ? err.message : err }, "Não foi possível gerar plano automaticamente (será gerado manualmente)"));
         
-            return c.json({message: "Objetivo atualizado com sucesso."}); 
+            return c.json({message: "Objetivo atualizado com sucesso. Seu plano de treinos está sendo gerado!"}); 
 
         } catch (error) {
             return c.json({error: "Erro ao atualizar objetivo."}, 500);
