@@ -148,11 +148,11 @@ const workoutService = {
         return workoutRepository.saveAiFeedback(workoutId, aiFeedback);
     },
 
-    async getDashboardData(userId: number): Promise<DashboardItem[]> {
+    async getDashboardData(userId: number, limit = 30, page = 1): Promise<DashboardItem[]> {
         
         if(userId == null) throw new Error("ID Inválido");
         
-        const rawWorkouts = await workoutRepository.getWorkoutsWithActivities(userId);
+        const rawWorkouts = await workoutRepository.getWorkoutsWithActivities(userId, limit, page);
 
         return rawWorkouts.map(w => {
 

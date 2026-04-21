@@ -276,6 +276,97 @@ export const ActivityEntitySchema = z.object({
 
 export type ActivityEntity = z.infer<typeof ActivityEntitySchema>;
 
+/**
+ * DTO de resposta para atividades formatadas para o Dashboard
+ */
+export interface ActivityResponseDTO {
+    id: number;
+    stravaId: number;
+    name: string;
+    type: string;
+    startDate: string;
+    distanceKm: number;
+    movingTime: string; // "HH:MM:SS" ou "MM:SS"
+    pace: string;
+    average_heartrate?: number;
+    total_elevation_gain?: number;
+    kudos_count?: number;
+    achievement_count?: number;
+}
+
+// =============================================================================
+// DASHBOARD & DTO SCHEMAS
+// =============================================================================
+
+/**
+ * Status possíveis de um workout no dashboard
+ */
+export type WorkoutStatus = 'Pendente' | 'Concluido' | 'Perdido';
+
+/**
+ * Dados do coach (feedback da IA) para exibição no dashboard
+ */
+export interface DashboardCoachFeedback {
+    score: number;
+    status: string;
+    emoji: string;
+    titulo_feedback: string;
+    comentario: string;
+    analise_splits: string;
+    aspectos_positivos: string[];
+    areas_melhoria: string[];
+    dica_proxima: string;
+}
+
+/**
+ * Item do dashboard com todos os dados do workout
+ */
+export interface DashboardItem {
+    id: number;
+    data: string; // YYYY-MM-DD
+    status: WorkoutStatus;
+    description: string;
+    
+    // Campos básicos
+    tipo: string;
+    titulo: string;
+    objetivo_sessao: string;
+    distancia_planejada: number;
+    tempo_estimado_min: number;
+    pace_planejado: string;
+    
+    // Estrutura detalhada de fases
+    fases: FasesTreino | null;
+    
+    // Dicas e sensação esperada
+    dicas_execucao: string[];
+    sensacao_esperada: string;
+    
+    // Contexto do plano
+    contexto_semana: string;
+    mensagem_coach: string;
+    foco_semana: string[];
+    
+    // Dados realizados (quando completado)
+    distancia_realizada?: number;
+    pace_realizado?: string;
+
+    // Feedback do coach
+    coach?: DashboardCoachFeedback;
+}
+
+/**
+ * DTO para salvar workout no banco de dados
+ */
+export interface SaveWorkoutDTO {
+    userId: number;
+    scheduleDate: Date;
+    description: string;
+    structure?: WorkoutStructure;
+    completedActivityId?: number;
+    aiFeedback?: AiFeedbackWrapper;
+}
+
 // =============================================================================
 // GOAL CONFIG SCHEMA
 // =============================================================================

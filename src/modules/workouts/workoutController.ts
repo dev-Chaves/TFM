@@ -66,20 +66,22 @@ const workoutController = {
     async getWorkoutByUserId(c: Context): Promise<Response> {
 
         const userId = Number(c.get("userId"));
+        const limit = Number(c.req.query("limit")) || 30;
+        const page = Number(c.req.query("page")) || 1;
 
         if(Number.isNaN(userId)) {
             return c.json<ErrorResponse>({erro: `ID Inválido`} as unknown as ErrorResponse, 400);
         }
 
         try {
-            const response: DashboardItem[] = await workoutService.getDashboardData(userId);
+            const response: DashboardItem[] = await workoutService.getDashboardData(userId, limit, page);
 
             if(response.length === 0){
                 c.header("Cache-Control", "no-store");
                 return c.json(response);
             }
 
-            c.header("Cache-Control", "private, max-age=60");''
+            c.header("Cache-Control", "private, max-age=60");
 
             return c.json(response);
         } catch (error) {
