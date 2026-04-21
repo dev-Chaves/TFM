@@ -1,8 +1,14 @@
 import { generateCompletion } from "./aiProvider";
 import userRepository from "../users/userRepository";
 import activityRepository from "../activities/activityRepository";
-import { calculatePace, formatActivyForAI } from "./aiFormatter";
+import { calculateBaseline, calculatePace, formatActivyForAI } from "./aiFormatter";
 import workoutService from "../workouts/workoutService";
+import { 
+    getWorkoutGenerationSystemPrompt,
+    getWorkoutGenerationUserPrompt,
+    getWorkoutFeedbackSystemPrompt,
+    getWorkoutFeedbackUserPrompt
+} from "./prompts";
 import { 
     StravaActivity, 
     StravaSplitMetric, 
@@ -10,7 +16,9 @@ import {
     PlanoSemanalAI,
     PlanoMensalAI,
     SemanaAI,
-    TreinoAI 
+    TreinoAI,
+    PlanoMensalAISchema,
+    AiFeedbackContentSchema
 } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 import { canGenerateWorkout, recordGenerationAttempt } from "./countQueue";
@@ -75,163 +83,15 @@ const aiService = {
 
         const goal = user.currentGoal;
 
-        const systemPrompt = `
-Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de experiência.
+        const baselineStats = calculateBaseline(recentActivities.map(a => a.rawData as StravaActivity));
 
-🏃 FILOSOFIA DE TREINO:
-- Periodização inteligente: alternância de estímulos para evolução constante.
-- Plano de QUATRO SEMANAS:
-    - Semana 1: Base/Adaptação
-    - Semana 2: Carga/Intensidade
-    - Semana 3: Pico/Volume
-    - Semana 4: Recuperação/Polimento (Tapering)
-- Regra dos 10%: nunca aumentar volume semanal mais que 10%
-- 80/20: 80% em baixa intensidade, 20% em alta intensidade
-- Recuperação é parte do treino: dias leves são tão importantes quanto os fortes
-
-📋 TIPOS DE TREINO (use apenas estes):
-1. RODAGEM: Corrida contínua em ritmo confortável (conversa possível)
-2. LONGO: Treino de resistência, maior volume da semana
-3. INTERVALADO: Tiros curtos/médios com recuperação (desenvolve velocidade)
-4. TEMPO RUN: Corrida no limiar anaeróbico (ritmo "desconfortavelmente confortável")
-5. REGENERATIVO: Recuperação ativa, ritmo muito leve
-6. FARTLEK: Variações de ritmo livres durante a corrida
-
-⚠️ REGRAS OBRIGATÓRIAS:
-- Sistema métrico (km, min/km)
-- Paces REALISTAS mas DESAFIADORES (sobrecarga progressiva) baseados no histórico.
-- PRECISÃO DE PACE: Para CADA km ou bloco (segmento), você DEVE preencher \`pace_alvo\` e \`zona_fc\`.
-- OBRIGATÓRIO: Use o campo \`segmentos\` na fase principal para listar a estratégia km a km (ou por blocos lógicos).
-- ZONAS DE FC: Indique OBRIGATORIAMENTE a zona de frequência cardíaca (Z1-Z5) para cada segmento ou série.
-- Cada treino DEVE ter: aquecimento, parte principal e desaquecimento devidamente separados.
-
-🏃 REGRAS PARA INTERVALADOS (OBRIGATÓRIO):
-- Use o campo \`series\` na fase principal para treinos intervalados.
-- Cada série DEVE conter:
-  - \`repeticoes\`: Número de repetições (ex: 6)
-  - \`distancia_m\`: Distância em metros (ex: 800)
-  - \`pace_alvo\`: Pace objetivo do tiro (ex: "4:30")
-  - \`zona_fc\`: Zona de FC durante o tiro (ex: "Z4")
-  - \`descanso_tipo\`: Tipo de recuperação entre tiros - use EXATAMENTE um destes: "parado", "trote" ou "caminhada"
-  - \`descanso_duracao\`: Tempo ou distância de descanso (ex: "90s", "200m", "2min")
-- Descreva no \`como_executar\` instruções claras sobre o descanso.
-
-- Tom motivador e pessoal (use "você", seja encorajador).
-- Responda EXCLUSIVAMENTE em formato JSON válido.
-`;
-
-        const userPrompt = `
-🎯 MISSÃO: Crie um plano de treino MENSAL (4 semanas) personalizado para este atleta.
-
-════════════════════════════════════════
-📊 PERFIL DO ATLETA
-════════════════════════════════════════
-Nome: ${user.name || "Atleta"}
-Peso: ${user.weight ? user.weight + "kg" : "Não informado"}
-Nível: ${goal.experienceLevel === "beginner" ? "Iniciante" : goal.experienceLevel === "intermediate" ? "Intermediário" : "Avançado"}
-
-════════════════════════════════════════
-🎯 OBJETIVO ATUAL
-════════════════════════════════════════
-Meta: ${goal.text || `Correr ${goal.targetDistanceKm}km`}
-Distância Alvo: ${goal.targetDistanceKm}km
-Data da Prova: ${goal.targetDate || "Não definida (treino contínuo)"}
-Treinos por Semana: ${goal.weeklyFrequency}
-Dias Disponíveis: ${goal.availableDays ? goal.availableDays.map((d: number) => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d]).join(', ') : "Qualquer dia"}
-
-════════════════════════════════════════
-📈 HISTÓRICO RECENTE (Últimos treinos)
-════════════════════════════════════════
-${historyContext || "Sem histórico disponível - atleta novo, seja conservador nos paces"}
-
-════════════════════════════════════════
-📝 INSTRUÇÕES DE GERAÇÃO
-════════════════════════════════════════
-1. Analise o pace médio recente para definir paces que "forcem" uma evolução (ex: 5-10s mais rápido que o conforto).
-2. Gere exatamente 4 SEMANAS de treinos.
-3. Cada semana deve ter exatamente ${goal.weeklyFrequency} treinos.
-4. Aplique periodização: adapte o volume e intensidade progressivamente.
-5. DETALHAMENTO OBRIGATÓRIO: Para CADA treino, quebre em fases e especifique Pace Alvo e Zona de FC para cada parte (ex: 1km a X pace, 2km a Y pace).
-6. Para INTERVALADOS, detalhe cada série com precisão.
-
-════════════════════════════════════════
-📤 FORMATO DE SAÍDA (JSON EXATO)
-════════════════════════════════════════
-{
-    "objetivo_mensal": "Meta de longo prazo (mês)",
-    "mensagem_coach": "Mensagem motivadora geral para o mês",
-    "semanas": [
-        {
-            "numero_semana": 1,
-            "resumo_semana": "Foco da semana 1",
-            "foco_semana": ["Base", "Adaptação"],
-            "treinos": [
-                {
-                    "dia": 1,
-                    "tipo": "Rodagem",
-                    "titulo": "✨ Início Leve",
-                    "objetivo_sessao": "Adaptação inicial",
-                    "distancia_total_km": 5,
-                    "tempo_estimado_min": 35,
-                    "fases": {
-                        "aquecimento": { "duracao_min": 10, "descricao": "Trote leve", "pace_sugerido": "6:00", "intensidade": "Leve" },
-                        "principal": {
-                            "tipo_estrutura": "continuo",
-                            "descricao_geral": "5km progressivos",
-                            "segmentos": [
-                                { "distancia_km": 1, "pace_alvo": "5:50", "zona_fc": "Z2", "descricao": "Aquecimento final" },
-                                { "distancia_km": 2, "pace_alvo": "5:40", "zona_fc": "Z3", "descricao": "Ritmo firme" },
-                                { "distancia_km": 2, "pace_alvo": "5:30", "zona_fc": "Z4", "descricao": "Forçar um pouco" }
-                            ],
-                            "como_executar": ["Comece tranquilo", "Acelere a cada km"]
-                        },
-                        "desaquecimento": { ... }
-                    },
-                    "dicas_execucao": [...],
-                    "sensacao_esperada": "...",
-                    "descricao_completa": "..."
-                },
-                {
-                    "dia": 3,
-                    "tipo": "Intervalado",
-                    "titulo": "🔥 Tiros 800m",
-                    "objetivo_sessao": "Desenvolver velocidade e VO2max",
-                    "distancia_total_km": 7,
-                    "tempo_estimado_min": 45,
-                    "fases": {
-                        "aquecimento": { "duracao_min": 15, "descricao": "Trote progressivo + educativos", "pace_sugerido": "6:00", "intensidade": "Leve" },
-                        "principal": {
-                            "tipo_estrutura": "intervalado",
-                            "descricao_geral": "6x800m com recuperação ativa",
-                            "series": [
-                                {
-                                    "repeticoes": 6,
-                                    "distancia_m": 800,
-                                    "pace_alvo": "4:15",
-                                    "zona_fc": "Z4",
-                                    "descanso_tipo": "trote",
-                                    "descanso_duracao": "200m em trote leve (Z1)"
-                                }
-                            ],
-                            "como_executar": [
-                                "Após cada tiro de 800m, faça 200m de trote leve (não pare totalmente)",
-                                "Use o trote para recuperar a respiração antes do próximo tiro",
-                                "Mantenha o pace consistente em todos os tiros"
-                            ]
-                        },
-                        "desaquecimento": { "duracao_min": 10, "descricao": "Trote leve + alongamento", "pace_sugerido": "6:30", "intensidade": "Muito leve" }
-                    },
-                    "dicas_execucao": ["Não arranque forte demais no primeiro tiro", "Hidrate-se entre as séries"],
-                    "sensacao_esperada": "Respiração intensa durante os tiros, mas recuperável no descanso",
-                    "descricao_completa": "..."
-                }
-            ]
-        }
-    ]
-}
-
-IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas baseados no histórico!
-`;
+        const systemPrompt = getWorkoutGenerationSystemPrompt();
+        const userPrompt = getWorkoutGenerationUserPrompt(
+            { name: user.name, weight: user.weight },
+            goal,
+            historyContext,
+            baselineStats
+        );
 
 
         const aiContent = await generateCompletion({
@@ -242,9 +102,17 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
             jsonMode: true
         });
 
-        const plan: PlanoMensalAI = JSON.parse(aiContent);
+        // Validação rigorosa da resposta da IA
+        let plan: PlanoMensalAI;
+        try {
+            const rawPlan = JSON.parse(aiContent);
+            plan = PlanoMensalAISchema.parse(rawPlan);
+        } catch (error) {
+            log.error({ userId, error, aiContent }, "Falha ao validar plano gerado pela IA");
+            throw new Error("Ocorreu um erro ao gerar um plano válido. Por favor, tente novamente.");
+        }
 
-        log.info({ userId, semanasCount: plan.semanas.length }, "Plano de treino mensal gerado com sucesso");
+        log.info({ userId, semanasCount: plan.semanas.length }, "Plano de treino mensal gerado e validado com sucesso");
 
         await workoutService.saveWorkout(userId, plan);
 
@@ -286,74 +154,13 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
                 .join(" | "); 
         }
 
-        const systemPrompt = `
-Você é o COACH VIRTUAL, um treinador de corrida experiente e motivador.
-
-🎯 SUA MISSÃO:
-Analisar a execução do treino do atleta comparando o PLANEJADO vs REALIZADO.
-Seja honesto, mas sempre encorajador. O objetivo é ajudar o atleta a evoluir.
-
-📊 CRITÉRIOS DE AVALIAÇÃO:
-- Score 9-10: Execução excelente, superou ou cumpriu perfeitamente
-- Score 7-8: Bom treino, pequenos ajustes necessários
-- Score 5-6: Treino parcial, precisa de atenção
-- Score 3-4: Treino abaixo do esperado, revisar estratégia
-- Score 0-2: Não cumpriu o objetivo
-
-🎭 TOM DE VOZ:
-- Use "você" para falar diretamente com o atleta
-- Seja motivador mesmo ao apontar melhorias
-- Celebre pequenas vitórias
-- Dê sugestões práticas e acionáveis
-
-⚠️ REGRAS:
-- Responda EXCLUSIVAMENTE em formato JSON válido
-- Analise a consistência dos splits (variação de pace)
-- Considere se era um treino de ritmo constante ou intervalado
-
-📤 FORMATO DO JSON:
-{
-    "score": 8,
-    "status": "Cumpriu",
-    "emoji": "🎯",
-    "titulo_feedback": "Treino sólido!",
-    "comentario_coach": "Mensagem direta e motivadora (2-3 frases, use o contexto do treino)",
-    "analise_splits": "Análise da consistência do ritmo km a km",
-    "pontos_positivos": ["Ponto específico 1", "Ponto específico 2"],
-    "pontos_atencao": ["Sugestão de melhoria 1"],
-    "dica_proxima": "Uma dica prática para o próximo treino similar"
-}
-`;
-
-        const userPrompt = `
-════════════════════════════════════════
-📋 TREINO PLANEJADO
-════════════════════════════════════════
-Tipo: ${planned?.tipo || "Corrida"}
-Objetivo: ${planned?.objetivo_sessao || "Treino padrão"}
-Distância Alvo: ${planned?.distancia_km || "N/A"}km
-Descrição: ${planned?.titulo || "N/A"}
-
-${planned?.fases?.principal ? `
-Estrutura Principal: ${planned.fases.principal.tipo_estrutura || "contínuo"}
-${planned.fases.principal.series ? `Séries: ${JSON.stringify(planned.fases.principal.series)}` : ""}
-` : ""}
-
-════════════════════════════════════════
-✅ TREINO REALIZADO
-════════════════════════════════════════
-Distância Total: ${(actual.distance / 1000).toFixed(2)} km
-Pace Médio: ${calculatePace(actual.average_speed)} min/km
-Tempo Total: ${Math.round(actual.moving_time / 60)} minutos
-${actual.average_heartrate ? `FC Média: ${Math.round(actual.average_heartrate)} bpm` : ""}
-
-════════════════════════════════════════
-📊 PARCIAIS (SPLITS KM A KM)
-════════════════════════════════════════
-${splitsTexto}
-
-Analise se o atleta manteve consistência no ritmo e se cumpriu o objetivo do treino.
-`;
+        const systemPrompt = getWorkoutFeedbackSystemPrompt();
+        const userPrompt = getWorkoutFeedbackUserPrompt(
+            planned,
+            actual,
+            splitsTexto,
+            calculatePace(actual.average_speed)
+        );
 
         
         try {
@@ -365,13 +172,12 @@ Analise se o atleta manteve consistência no ritmo e se cumpriu o objetivo do tr
                 jsonMode: true
             });
 
-            const aiFeedback = JSON.parse(content);
+            const rawFeedback = JSON.parse(content);
+            const aiFeedback = AiFeedbackContentSchema.parse(rawFeedback);
 
             await workoutService.saveAiFeedback(workoutId, { feedbackText: aiFeedback });
-            
-            
 
-            log.info({ workoutId }, "Feedback de treino gerado e salvo com sucesso");
+            log.info({ workoutId }, "Feedback de treino gerado, validado e salvo com sucesso");
 
         } catch (error) {
             log.error({ workoutId, error: error instanceof Error ? error.message : error }, "Erro ao analisar treino");

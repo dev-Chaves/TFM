@@ -1,5 +1,5 @@
 import userRepository from "./userRepository";
-import { GoalConfig } from "../../shared/schemas";
+import { GoalConfig, GoalConfigSchema } from "../../shared/schemas";
 
 /**
  * Response type for goal update
@@ -11,10 +11,12 @@ export interface UpdateGoalResponse {
 const userService = {
 
     /**
-     * Atualiza o objetivo do usuário
+     * Atualiza o objetivo do usuário com validação Zod
      */
     async updateGoal(userId: number, goalData: GoalConfig): Promise<void> {
-        await userRepository.updateGoal(userId, goalData);
+        // Valida os dados antes de salvar
+        const validatedGoal = GoalConfigSchema.parse(goalData);
+        await userRepository.updateGoal(userId, validatedGoal);
     },
 
     /**

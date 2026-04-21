@@ -43,4 +43,50 @@ export function formatActivyForAI(raw: StravaActivity): CleanActivityForAI {
         elevacao: `${raw.total_elevation_gain}m`,
         frequencia_cardiaca: heartRate
     };
+}
+
+/**
+ * Calcula a baseline do atleta com base nas atividades recentes.
+ * Retorna média de pace, maior distância e melhor pace.
+ */
+export function calculateBaseline(activities: StravaActivity[]) {
+    if (activities.length === 0) {
+        return {
+            avgPace: "N/A",
+            maxDistance: 0,
+            bestPace: "N/A"
+        };
+    }
+
+    const runs = activities.filter(a => a.sport_type === 'Run');
+    
+    if (runs.length === 0) {
+        return {
+            avgPace: "N/A",
+            maxDistance: 0,
+            bestPace: "N/A"
+        };
+    }
+
+    // 1. Média de Pace (considerando a velocidade média ponderada pela distância)
+    const totalDistance = runs.reduce((acc, a) => acc + a.distance, 0);
+    const totalTime = runs.reduce((acc, a) => acc + a.moving_time, 0);
+    const avgSpeed = totalDistance / totalTime;
+    const avgPace = calculatePace(avgSpeed);
+
+    // 2. Maior Distância
+    const maxDistance = Math.max(...runs.map(a => a.distance)) / 1000;
+
+    // 3. Melhor Pace (Maior velocidade média em uma atividade de pelo menos 2km)
+    const significantRuns = runs.filter(a => a.distance >= 2000);
+    const bestSpeed = significantRuns.length > 0 
+        ? Math.max(...significantRuns.map(a => a.average_speed))
+        : Math.max(...runs.map(a => a.average_speed));
+    const bestPace = calculatePace(bestSpeed);
+
+    return {
+        avgPace,
+        maxDistance: parseFloat(maxDistance.toFixed(2)),
+        bestPace
+    };
 }   

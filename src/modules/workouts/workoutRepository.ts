@@ -102,15 +102,16 @@ const workoutRepository = {
         }).where(eq(workouts.id, workoutId));
     },
 
-    async getWorkoutsWithActivities(userId: number) {
-
+    async getWorkoutsWithActivities(userId: number, limit = 30, page = 1) {
+        const offset = (page - 1) * limit;
         return db.query.workouts.findMany({
             where: eq(workouts.userId, userId),
             orderBy: [desc(workouts.scheduleDate)],
             with: {
                 activity: true
             },
-            limit: 30
+            limit: limit,
+            offset: offset
         });
 
     },

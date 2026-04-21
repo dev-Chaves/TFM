@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { ZodError } from 'zod';
 import auth from './modules/auth/auth';
 import activities from './modules/activities/activities';
 import ai from './modules/ai/ai';
@@ -11,6 +12,31 @@ import logger, { createLogger } from './shared/utils/logger';
 const log = createLogger("Server");
 
 const app = new Hono();
+
+// Global Error Handler
+app.onError((err, c) => {
+  log.error({ 
+    err: err instanceof Error ? err.message : err,
+    stack: err instanceof Error ? err.stack : undefined,
+    path: c.req.path,
+    method: c.req.method
+  }, "Unhandled Error");
+
+  if (err instanceof ZodError) {
+    return c.json({
+      error: "Erro de validação de dados.",
+      details: err.errors.map(e => ({
+        path: e.path.join('.'),
+        message: e.message
+      }))
+    }, 400);
+  }
+
+  const status = (err as any).status || 500;
+  return c.json({
+    error: err instanceof Error ? err.message : "Erro interno no servidor."
+  }, status);
+});
 
 // Request logging middleware
 app.use('*', async (c, next) => {

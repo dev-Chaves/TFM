@@ -286,9 +286,9 @@ const activityService = {
     /**
      * Retorna as últimas atividades do usuário formatadas para o frontend
      */
-    async getActivities(userId: number): Promise<ActivityResponseDTO[]> {
-        log.debug({ userId }, "Buscando atividades do usuário");
-        const rawActivities = await activityRepository.getLastActivities(userId);
+    async getActivities(userId: number, limit = 30, page = 1): Promise<ActivityResponseDTO[]> {
+        log.debug({ userId, limit, page }, "Buscando atividades do usuário com paginação");
+        const rawActivities = await activityRepository.getLastActivities(userId, limit, page);
         return rawActivities.map((activity) => toActivityResponseDTO(activity as ActivityEntity));
     },
 

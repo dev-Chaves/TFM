@@ -20,13 +20,15 @@ const activityController = {
      */
     async getActivities(c: Context): Promise<Response> {
         const id = Number(c.get("userId"));
+        const limit = Number(c.req.query("limit")) || 30;
+        const page = Number(c.req.query("page")) || 1;
         
         if(Number.isNaN(id)) {
             return c.json<ErrorResponse>({erro: `ID Inválido`}, 400);
         }
 
         try {
-            const activities: ActivityResponseDTO[] = await activityService.getActivities(id);
+            const activities: ActivityResponseDTO[] = await activityService.getActivities(id, limit, page);
 
             if(activities.length === 0){
                 c.header("Cache-Control", "no-store");
