@@ -37,7 +37,7 @@ const workoutRepository = {
 
         const result = await db.insert(workouts).values({
             userId: userId,
-            scheduleDate: new Date(workoutData.scheduleDate).toString(),
+            scheduleDate: new Date(workoutData.scheduleDate).toISOString().split('T')[0],
             description: workoutData.description,
             structure: workoutData.structure || null,
             completedActivityId: workoutData.completedActivityId || null,

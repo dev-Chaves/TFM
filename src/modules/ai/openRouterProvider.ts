@@ -19,8 +19,14 @@ export const openRouterProvider: AIProvider = {
             ...(options.jsonMode && { response_format: { type: "json_object" } })
         });
         
-        const content = completion.choices[0].message.content;
+        let content = completion.choices[0].message.content;
         if (!content) throw new Error("OpenRouter: resposta vazia");
+
+        // DeepSeek R1 envolve o JSON em tags <｜end▁of▁thinking｜> quebram o parse
+        content = content.replace(/^[\s\S]*?```json\s*|\s*```[\s\S]*$/g, "").trim();
+        // Remove possíveis tags  do modelo de raciocínio caso venham sem code block
+        content = content.replace(/^[\s\S]*?({)/, "$1");
+
         return content;
     }
 };

@@ -84,9 +84,6 @@ const workoutService = {
             log.info({ userId, deletedCount: deletedWorkouts.length }, "Treinos pendentes anteriores removidos");
         }
 
-        // Atualiza timestamp após validações e antes de salvar
-        await userRepository.updateUserLastWorkoutGeneratedAt(userId);
-
         const availableDays = user?.currentGoal?.availableDays;
         
         if (!availableDays || availableDays.length === 0) {
@@ -133,7 +130,9 @@ const workoutService = {
             });
         }
 
-        return await workoutRepository.saveMany(workoutsToSave);
+        await workoutRepository.saveMany(workoutsToSave);
+
+        await userRepository.updateUserLastWorkoutGeneratedAt(userId);
     },
 
     async getWorkoutByUserId(userId: number) {
@@ -156,15 +155,15 @@ const workoutService = {
 
         return rawWorkouts.map(w => {
 
-            const hoje = new Date().toString().split('T')[0];
+            const hoje = new Date().toISOString().split('T')[0];
 
-            const workoutDate = new Date(w.scheduleDate).toISOString().split("T");
+            const workoutDate = new Date(w.scheduleDate).toISOString().split("T")[0];
 
             let status: DashboardItem['status'] = 'Pendente';
 
             if(w.completedActivityId) status = 'Concluido';
 
-            else if(!w.completedActivityId && w.scheduleDate < hoje) status = 'Perdido';
+            else if(!w.completedActivityId && workoutDate < hoje) status = 'Perdido';
 
             const structure = w.structure as WorkoutStructure | null; 
             const feedback = w.aiFeedback as AiFeedbackWrapper | null;
