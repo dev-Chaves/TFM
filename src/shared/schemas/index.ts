@@ -204,7 +204,7 @@ export type AiFeedbackWrapper = z.infer<typeof AiFeedbackWrapperSchema>;
  * Schema para treino individual gerado pela IA
  */
 export const TreinoAISchema = z.object({
-    dia: z.number(),
+    dia: z.union([z.number(), z.string()]),
     tipo: z.string(),
     titulo: z.string(),
     objetivo_sessao: z.string(),
