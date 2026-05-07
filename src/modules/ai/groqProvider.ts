@@ -16,6 +16,9 @@ export const groqProvider: AIProvider = {
             ...(options.jsonMode && { response_format: { type: "json_object" } })
         });
         
+        if (!completion.choices?.length) {
+            throw new Error("Groq: resposta sem choices");
+        }
         const content = completion.choices[0].message.content;
         if (!content) throw new Error("Groq: resposta vazia");
         return content;

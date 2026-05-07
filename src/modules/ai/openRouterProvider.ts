@@ -19,6 +19,9 @@ export const openRouterProvider: AIProvider = {
             ...(options.jsonMode && { response_format: { type: "json_object" } })
         });
         
+        if (!completion.choices?.length) {
+            throw new Error("OpenRouter: resposta sem choices");
+        }
         let content = completion.choices[0].message.content;
         if (!content) throw new Error("OpenRouter: resposta vazia");
 
