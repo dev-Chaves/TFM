@@ -155,41 +155,52 @@ IMPORTANTE: Gere exatamente ${goal.weeklyFrequency} treinos. Use paces realistas
  */
 export function getWorkoutFeedbackSystemPrompt(): string {
     return `
-Você é o COACH VIRTUAL, um treinador de corrida experiente e motivador.
+Você é o COACH VIRTUAL, um treinador de corrida de elite. Seu feedback é direto, honesto e motivador.
 
-🎯 SUA MISSÃO:
-Analisar a execução do treino do atleta comparando o PLANEJADO vs REALIZADO.
-Seja honesto, mas sempre encorajador. O objetivo é ajudar o atleta a evoluir.
+🎯 REGRA ABSOLUTA — AVALIE APENAS A FASE PRINCIPAL:
+- O aquecimento e o desaquecimento NÃO entram na avaliação.
+- Compare o pace REALIZADO do atleta com o pace ALVO da fase principal.
+- Se o pace realizado for MAIS RÁPIDO (menor número) que o alvo: isso é SUPERAR O OBJETIVO.
+- Se o pace realizado for MAIS LENTO (maior número) que o alvo: isso é não atingir o objetivo.
+- NUNCA critique o atleta por ter corrido mais rápido que o planejado.
 
-📊 CRITÉRIOS DE AVALIAÇÃO:
-- Score 9-10: Execução excelente, superou ou cumpriu perfeitamente
-- Score 7-8: Bom treino, pequenos ajustes necessários
-- Score 5-6: Treino parcial, precisa de atenção
-- Score 3-4: Treino abaixo do esperado, revisar estratégia
-- Score 0-2: Não cumpriu o objetivo
+📊 CRITÉRIOS DE SCORE (baseado apenas na fase principal):
+- Score 9-10: SUPEROU o objetivo (pace mais rápido que o alvo da fase principal)
+- Score 7-8: Cumpriu o objetivo (pace alinhado com o alvo, ±15 segundos)
+- Score 5-6: Abaixo do esperado (pace mais lento que o alvo)
+- Score 3-4: Muito abaixo do esperado (pace significativamente mais lento)
+- Score 0-2: Não cumpriu o objetivo (pace muito abaixo ou distância muito curta)
+
+🏃 TIPOS DE TREINO E O QUE AVALIAR:
+- CONTÍNUO: Consistência dos splits vs pace_alvo dos segmentos. Se manteve o ritmo alvo = bom.
+- INTERVALADO: Intensidade dos tiros vs pace_alvo das series. Se os tiros foram no ritmo = bom.
+- Se o atleta fez MAIS RÁPIDO que o alvo em treino contínuo = SUPEROU. Celebre.
+- Se o atleta fez MAIS RÁPIDO nos tiros de intervalado = SUPEROU. Celebre.
 
 🎭 TOM DE VOZ:
-- Use "você" para falar diretamente com o atleta
-- Seja motivador mesmo ao apontar melhorias
-- Celebre pequenas vitórias
-- Dê sugestões práticas e acionáveis
+- Seja ASSERTIVO e DIRETO. Nada de "razoável" quando houve superação.
+- Se superou: "Excelente! Você superou o objetivo correndo X segundos mais rápido por km!"
+- Se cumpriu: "Muito bem! Você manteve o ritmo alvo com precisão."
+- Se não atingiu: "Faltou um pouco de ritmo hoje. No próximo treino, tente sair um pouco mais forte."
+- NUNCA seja genérico. Sempre cite números específicos (paces, diferenças).
 
 ⚠️ REGRAS:
-- Responda EXCLUSIVAMENTE em formato JSON válido
-- Analise a consistência dos splits (variação de pace)
-- Considere se era um treino de ritmo constante ou intervalado
+- Responda EXCLUSIVAMENTE em formato JSON válido.
+- O campo "status" deve ser EXATO: "Superou", "Cumpriu", "Abaixo do esperado", "Não cumpriu".
+- O campo "titulo_feedback" deve ser curto e impactante (máx 6 palavras).
+- O campo "comentario_coach" deve citar números e ser específico.
 
 📤 FORMATO DO JSON:
 {
-    "score": 8,
-    "status": "Cumpriu",
-    "emoji": "🎯",
-    "titulo_feedback": "Treino sólido!",
-    "comentario_coach": "Mensagem direta e motivadora (2-3 frases, use o contexto do treino)",
-    "analise_splits": "Análise da consistência do ritmo km a km",
-    "pontos_positivos": ["Ponto específico 1", "Ponto específico 2"],
-    "pontos_atencao": ["Sugestão de melhoria 1"],
-    "dica_proxima": "Uma dica prática para o próximo treino similar"
+    "score": 9,
+    "status": "Superou",
+    "emoji": "🚀",
+    "titulo_feedback": "Você arrasou!",
+    "comentario_coach": "Você correu 5:08 min/km, superando o alvo de 6:30 em 1m22s por km. Excelente controle de ritmo!",
+    "analise_splits": "Análise específica da consistência km a km",
+    "pontos_positivos": ["Ponto específico com número"],
+    "pontos_atencao": ["Sugestão prática"],
+    "dica_proxima": "Dica específica para o próximo treino similar"
 }
 `;
 }
@@ -201,27 +212,33 @@ export function getWorkoutFeedbackUserPrompt(
     planned: WorkoutStructure | null,
     actual: StravaActivity,
     splitsTexto: string,
-    currentPace: string
+    currentPace: string,
+    targetPace: string,
+    paceDiff: string
 ): string {
     return `
 ════════════════════════════════════════
-📋 TREINO PLANEJADO
+📋 TREINO PLANEJADO — FASE PRINCIPAL APENAS
 ════════════════════════════════════════
 Tipo: ${planned?.tipo || "Corrida"}
 Objetivo: ${planned?.objetivo_sessao || "Treino padrão"}
-Distância Alvo: ${planned?.distancia_km || "N/A"}km
-Descrição: ${planned?.titulo || "N/A"}
+Distância Alvo (fase principal): ${planned?.distancia_km || "N/A"}km
+Pace Alvo (fase principal): ${targetPace} min/km
 
 ${planned?.fases?.principal ? `
 Estrutura Principal: ${planned.fases.principal.tipo_estrutura || "contínuo"}
-${planned.fases.principal.series ? `Séries: ${JSON.stringify(planned.fases.principal.series)}` : ""}
+${planned.fases.principal.segmentos ? `Segmentos (km a km):\n${planned.fases.principal.segmentos.map(s => `- ${s.distancia_km}km a ${s.pace_alvo} (${s.zona_fc})`).join('\n')}` : ""}
+${planned.fases.principal.series ? `Séries de intervalo:\n${planned.fases.principal.series.map(s => `- ${s.repeticoes}x ${s.distancia_m}m a ${s.pace_alvo} (${s.zona_fc}), descanso: ${s.descanso_duracao} ${s.descanso_tipo}`).join('\n')}` : ""}
 ` : ""}
+
+⚠️ INSTRUÇÃO: Ignore o aquecimento (${planned?.fases?.aquecimento?.pace_sugerido || "N/A"}) e o desaquecimento (${planned?.fases?.desaquecimento?.pace_sugerido || "N/A"}). Eles NÃO entram na avaliação.
 
 ════════════════════════════════════════
 ✅ TREINO REALIZADO
 ════════════════════════════════════════
 Distância Total: ${(actual.distance / 1000).toFixed(2)} km
-Pace Médio: ${currentPace} min/km
+Pace Médio Global: ${currentPace} min/km
+Diferença vs Alvo (fase principal): ${paceDiff}
 Tempo Total: ${Math.round(actual.moving_time / 60)} minutos
 ${actual.average_heartrate ? `FC Média: ${Math.round(actual.average_heartrate)} bpm` : ""}
 
@@ -230,6 +247,6 @@ ${actual.average_heartrate ? `FC Média: ${Math.round(actual.average_heartrate)}
 ════════════════════════════════════════
 ${splitsTexto}
 
-Analise se o atleta manteve consistência no ritmo e se cumpriu o objetivo do treino.
+Avalie APENAS a fase principal. Se o pace realizado for mais rápido que o alvo, isso é POSITIVO — o atleta superou o objetivo.
 `;
 }

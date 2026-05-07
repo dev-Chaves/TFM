@@ -1,7 +1,7 @@
 import { generateCompletion } from "./aiProvider";
 import userRepository from "../users/userRepository";
 import activityRepository from "../activities/activityRepository";
-import { calculateBaseline, calculatePace, formatActivyForAI } from "./aiFormatter";
+import { calculateBaseline, calculatePace, formatActivyForAI, parsePace, formatPaceFromDecimal } from "./aiFormatter";
 import workoutService from "../workouts/workoutService";
 import { 
     getWorkoutGenerationSystemPrompt,
@@ -133,9 +133,9 @@ const aiService = {
      * Fire-and-forget: não retorna nada, apenas salva o feedback no banco
      */
     async generateWorkoutFeedback(
-        userId: number, 
-        workoutId: number, 
-        planned: WorkoutStructure | null, 
+        userId: number,
+        workoutId: number,
+        planned: WorkoutStructure | null,
         actual: StravaActivity
     ): Promise<void> {
 
@@ -151,7 +151,41 @@ const aiService = {
                     const pace = calculatePace(split.average_speed);
                     return `Km ${index + 1}: ${pace}`;
                 })
-                .join(" | "); 
+                .join(" | ");
+        }
+
+        // 2. Calcular pace alvo da fase principal
+        let targetPace = "N/A";
+        if (planned?.fases?.principal) {
+            const principal = planned.fases.principal;
+            if (principal.segmentos && principal.segmentos.length > 0) {
+                const paces = principal.segmentos
+                    .map(s => parsePace(s.pace_alvo))
+                    .filter(p => p > 0);
+                if (paces.length > 0) {
+                    const avg = paces.reduce((a, b) => a + b, 0) / paces.length;
+                    targetPace = formatPaceFromDecimal(avg);
+                }
+            } else if (principal.series && principal.series.length > 0) {
+                targetPace = principal.series[0].pace_alvo;
+            } else if (principal.pace_alvo) {
+                targetPace = principal.pace_alvo;
+            }
+        }
+
+        // 3. Calcular diferença de pace
+        const actualPaceMin = parsePace(calculatePace(actual.average_speed));
+        const targetPaceMin = parsePace(targetPace);
+        let paceDiff = "N/A";
+        if (targetPaceMin > 0) {
+            const diff = actualPaceMin - targetPaceMin;
+            if (diff < 0) {
+                paceDiff = `${Math.abs(diff).toFixed(1)} min/km MAIS RÁPIDO (superou)`;
+            } else if (diff > 0) {
+                paceDiff = `${diff.toFixed(1)} min/km MAIS LENTO (abaixo)`;
+            } else {
+                paceDiff = "Exatamente no alvo";
+            }
         }
 
         const systemPrompt = getWorkoutFeedbackSystemPrompt();
@@ -159,10 +193,12 @@ const aiService = {
             planned,
             actual,
             splitsTexto,
-            calculatePace(actual.average_speed)
+            calculatePace(actual.average_speed),
+            targetPace,
+            paceDiff
         );
 
-        
+
         try {
             const content = await generateCompletion({
                 messages: [
@@ -175,7 +211,17 @@ const aiService = {
             const rawFeedback = JSON.parse(content);
             const aiFeedback = AiFeedbackContentSchema.parse(rawFeedback);
 
-            await workoutService.saveAiFeedback(workoutId, { feedbackText: aiFeedback });
+            // Enriquecer feedback com dados comparativos calculados
+            const enrichedFeedback = {
+                ...aiFeedback,
+                pace_alvo_principal: targetPace,
+                pace_realizado: calculatePace(actual.average_speed),
+                pace_diferenca: paceDiff,
+                distancia_alvo: planned?.distancia_km || 0,
+                distancia_realizada: Number((actual.distance / 1000).toFixed(2)),
+            };
+
+            await workoutService.saveAiFeedback(workoutId, { feedbackText: enrichedFeedback });
 
             log.info({ workoutId }, "Feedback de treino gerado, validado e salvo com sucesso");
 

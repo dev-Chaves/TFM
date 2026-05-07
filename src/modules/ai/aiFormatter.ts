@@ -23,6 +23,25 @@ export function calculatePace(speedMetersPerSecond: number): string {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Converte string de pace (ex: "6:30") para minutos decimais (ex: 6.5)
+ */
+export function parsePace(paceStr: string): number {
+    const cleaned = paceStr.trim();
+    const [min, sec] = cleaned.split(':').map(Number);
+    if (isNaN(min)) return 0;
+    return min + (sec || 0) / 60;
+}
+
+/**
+ * Converte minutos decimais para string de pace (ex: 6.5 -> "6:30")
+ */
+export function formatPaceFromDecimal(minutes: number): string {
+    const min = Math.floor(minutes);
+    const sec = Math.round((minutes - min) * 60);
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+}
+
 export function formatActivyForAI(raw: StravaActivity): CleanActivityForAI {
 
     const date = new Date(raw.start_date).toLocaleDateString('pt-BR');

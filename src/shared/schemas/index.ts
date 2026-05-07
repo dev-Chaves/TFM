@@ -183,6 +183,12 @@ export const AiFeedbackContentSchema = z.object({
     pontos_positivos: z.array(z.string()),
     pontos_atencao: z.array(z.string()),
     dica_proxima: z.string(),
+    // Campos comparativos preenchidos pelo backend
+    pace_alvo_principal: z.string().optional(),
+    pace_realizado: z.string().optional(),
+    pace_diferenca: z.string().optional(),
+    distancia_alvo: z.number().optional(),
+    distancia_realizada: z.number().optional(),
 });
 
 export type AiFeedbackContent = z.infer<typeof AiFeedbackContentSchema>;
