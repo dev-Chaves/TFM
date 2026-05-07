@@ -1,7 +1,7 @@
 services:
  
   db:
-    image: postgres:18-alpine
+    image: postgres:16-alpine
     container_name: tfm_postgres
     restart: always
     ports:

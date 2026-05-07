@@ -11,12 +11,17 @@ export const authMiddleware = createMiddleware<Env>(async (c, next) => {
   const authHeader = c.req.header("Authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer "))
-    return c.json({ error: "Token não fonercido ou inválido" }, 401);
+    return c.json({ error: "Token não fornecido ou inválido" }, 401);
 
   const token = authHeader?.split(" ")[1];
 
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET is required");
+  }
+
   try {
-    const payload = await verify(token, process.env.JWT_SECRET!);
+    const payload = await verify(token, jwtSecret);
 
     c.set("userId", Number(payload.sub));
 

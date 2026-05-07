@@ -72,9 +72,11 @@ const aiService = {
 
         const recentActivities = await activityRepository.getLastActivities(userId, 15);
 
-        const historyContext = recentActivities.map(a => formatActivyForAI(a.rawData as StravaActivity)).map(a => 
-            `- Data: ${a.data}, Tipo: ${a.tipo}, Dist: ${a.distancia_km}, Tempo: ${a.tempo_movimento}, Pace: ${a.pace_medio}, FC: ${a.frequencia_cardiaca}`
-        ).join("\n");
+        const historyContext = recentActivities
+            .filter(a => a.rawData !== null)
+            .map(a => formatActivyForAI(a.rawData as StravaActivity))
+            .map(a => `- Data: ${a.data}, Tipo: ${a.tipo}, Dist: ${a.distancia_km}, Tempo: ${a.tempo_movimento}, Pace: ${a.pace_medio}, FC: ${a.frequencia_cardiaca}`)
+            .join("\n");
 
         if(user.currentGoal == null || user.currentGoal == undefined) {
             log.warn({ userId }, "Usuário não possui metas");
@@ -83,7 +85,11 @@ const aiService = {
 
         const goal = user.currentGoal;
 
-        const baselineStats = calculateBaseline(recentActivities.map(a => a.rawData as StravaActivity));
+        const baselineStats = calculateBaseline(
+            recentActivities
+                .filter(a => a.rawData !== null)
+                .map(a => a.rawData as StravaActivity)
+        );
 
         const systemPrompt = getWorkoutGenerationSystemPrompt();
         const userPrompt = getWorkoutGenerationUserPrompt(

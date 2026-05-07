@@ -2,7 +2,7 @@ FROM oven/bun:1 as base
 WORKDIR /usr/src/app
 
 # Instalar dependências
-COPY package.json bun.lock ./
+COPY package.json bun.lockb ./
 RUN bun install --frozen-lockfile --production
 
 

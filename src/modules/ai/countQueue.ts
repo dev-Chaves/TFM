@@ -18,6 +18,22 @@ interface GenerationAttempt {
 const generationHistory = new Map<number, GenerationAttempt>();
 
 const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 horas
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hora
+
+// Limpa entradas antigas a cada hora para evitar memory leak
+setInterval(() => {
+    const now = Date.now();
+    let cleaned = 0;
+    for (const [userId, attempt] of generationHistory.entries()) {
+        if (now - attempt.lastAttempt.getTime() >= COOLDOWN_MS) {
+            generationHistory.delete(userId);
+            cleaned++;
+        }
+    }
+    if (cleaned > 0) {
+        log.info({ cleaned, remaining: generationHistory.size }, "CountQueue cleanup executado");
+    }
+}, CLEANUP_INTERVAL_MS);
 
 /**
  * Verifica se o usuário pode gerar um novo treino

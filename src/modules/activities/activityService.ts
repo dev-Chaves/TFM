@@ -3,6 +3,7 @@ import aiService from "../ai/aiService";
 import userRepository from "../users/userRepository"
 import workoutRepository from "../workouts/workoutRepository";
 import activityRepository from "./activityRepository";
+import authService from "../auth/authService";
 import { ActivityResponseDTO, toActivityResponseDTO, ActivityEntity } from "./activitiesDTO";
 import { StravaActivity, StravaActivitySchema, WorkoutStructure } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
@@ -148,6 +149,22 @@ function findBestMatch(
 // ACTIVITY SERVICE
 // =============================================================================
 
+/**
+ * Helper: garante que o access_token do Strava está válido, renovando se necessário
+ */
+async function ensureValidStravaToken(user: NonNullable<Awaited<ReturnType<typeof userRepository.getUserById>>>): Promise<string> {
+    const now = new Date();
+    // Se o token expirou (ou expira em menos de 5 minutos), renova
+    if (!user.expiresAt || user.expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) {
+        if (!user.refreshToken) {
+            throw new Error("Refresh token não disponível para renovar access token do Strava");
+        }
+        const refreshed = await authService.refreshStravaToken(user.id, user.refreshToken);
+        return refreshed.access_token;
+    }
+    return user.accessToken!;
+}
+
 const activityService = {
 
     /**
@@ -165,6 +182,8 @@ const activityService = {
             throw new Error("Usuário não encontrado");
         }
 
+        const accessToken = await ensureValidStravaToken(user);
+
         const lastActivity = await activityRepository.getLastActivityByUserId(userId);
         
         let afterParam = "";
@@ -179,7 +198,7 @@ const activityService = {
         const response = await fetch(url, {
             method: "GET",
             headers: {
-                "Authorization" : `Bearer ${user.accessToken}`
+                "Authorization" : `Bearer ${accessToken}`
             }
         });
 
@@ -194,13 +213,11 @@ const activityService = {
         const activitiesArraySchema = z.array(StravaActivitySchema);
         const parseResult = activitiesArraySchema.safeParse(rawData);
         
-        let stravaActivities: StravaActivity[];
-        if (parseResult.success) {
-            stravaActivities = parseResult.data;
-        } else {
-            log.warn({ error: parseResult.error.message }, "Strava response não passou validação Zod, usando dados raw");
-            stravaActivities = rawData as StravaActivity[];
+        if (!parseResult.success) {
+            log.error({ error: parseResult.error.message }, "Strava response inválido");
+            throw new Error("Resposta inválida do Strava");
         }
+        const stravaActivities = parseResult.data;
 
         log.info({ count: stravaActivities.length }, "Atividades recebidas do Strava");
 
@@ -308,13 +325,15 @@ const activityService = {
             return null;
         }
 
+        const accessToken = await ensureValidStravaToken(user);
+
         const url = `https://www.strava.com/api/v3/activities/${stravaActivityId}`;
 
         try {
             const response = await fetch(url, {
                 method: "GET",
                 headers: {
-                    "Authorization": `Bearer ${user.accessToken}`
+                    "Authorization": `Bearer ${accessToken}`
                 }
             });
 
@@ -332,16 +351,14 @@ const activityService = {
             // Valida resposta com Zod (permissive para aceitar campos extras)
             const parseResult = StravaActivitySchema.safeParse(rawData);
             
-            let activityDetails: StravaActivity;
-            if (parseResult.success) {
-                activityDetails = parseResult.data;
-            } else {
-                log.warn({ 
+            if (!parseResult.success) {
+                log.error({ 
                     error: parseResult.error.message,
                     stravaActivityId 
-                }, "Resposta detalhada não passou validação Zod, usando dados raw");
-                activityDetails = rawData as StravaActivity;
+                }, "Resposta detalhada inválida do Strava");
+                return null;
             }
+            const activityDetails = parseResult.data;
 
             log.info({ 
                 stravaActivityId,

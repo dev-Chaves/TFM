@@ -91,6 +91,19 @@ const userRepository = {
         await db.update(users).set({
             lastWorkoutGeneratedAt: new Date()
         }).where(eq(users.id, userId));
+    },
+
+    async updateStravaTokens(
+        userId: number,
+        accessToken: string,
+        refreshToken: string,
+        expiresAt: Date
+    ): Promise<void> {
+        await db.update(users).set({
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresAt: expiresAt
+        }).where(eq(users.id, userId));
     }
 
 }

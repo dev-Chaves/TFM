@@ -13,6 +13,56 @@ const log = createLogger("AuthService");
 const authService = {
 
     /**
+     * Renova o access_token do Strava usando o refresh_token
+     */
+    async refreshStravaToken(userId: number, refreshToken: string): Promise<{ access_token: string; refresh_token: string; expires_at: number }> {
+        const clientId = process.env.CLIENT_ID;
+        const clientSecret = process.env.CLIENT_SECRET;
+        if (!clientId || !clientSecret) {
+            throw new Error("CLIENT_ID and CLIENT_SECRET are required");
+        }
+
+        const params = new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: "refresh_token"
+        });
+
+        const response = await fetch(`https://www.strava.com/oauth/token?${params.toString()}`, {
+            method: "POST"
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            log.error({ status: response.status, body: errorText }, "Erro ao renovar token do Strava");
+            throw new Error(`Erro ao renovar token: ${response.status}`);
+        }
+
+        const rawData: unknown = await response.json();
+        const parseResult = StravaTokenResponseSchema.safeParse(rawData);
+
+        if (!parseResult.success) {
+            log.error({ error: parseResult.error.message }, "Resposta inválida ao renovar token");
+            throw new Error("Resposta inválida do Strava ao renovar token");
+        }
+
+        const { access_token, refresh_token, expires_at } = parseResult.data;
+
+        // Atualiza no banco
+        await userRepository.updateStravaTokens(
+            userId,
+            access_token,
+            refresh_token,
+            new Date(expires_at * 1000)
+        );
+
+        log.info({ userId }, "Token do Strava renovado com sucesso");
+
+        return { access_token, refresh_token, expires_at };
+    },
+
+    /**
      * Troca o código de autorização do Strava por tokens de acesso
      * e cria/atualiza o usuário no banco de dados
      */
@@ -26,9 +76,15 @@ const authService = {
         log.info("Iniciando troca de código por token");
 
         try {
+            const clientId = process.env.CLIENT_ID;
+            const clientSecret = process.env.CLIENT_SECRET;
+            if (!clientId || !clientSecret) {
+                throw new Error("CLIENT_ID and CLIENT_SECRET are required");
+            }
+
             const params = new URLSearchParams({
-                client_id: process.env.CLIENT_ID || "",
-                client_secret: process.env.CLIENT_SECRET || "",
+                client_id: clientId,
+                client_secret: clientSecret,
                 code: code,
                 grant_type: "authorization_code"
             });
@@ -60,13 +116,11 @@ const authService = {
             // Valida a resposta com Zod
             const parseResult = StravaTokenResponseSchema.safeParse(rawData);
             
-            let tokenData: StravaTokenResponse;
-            if (parseResult.success) {
-                tokenData = parseResult.data;
-            } else {
-                log.warn({ error: parseResult.error.message }, "Token response não passou validação Zod");
-                tokenData = rawData as StravaTokenResponse;
+            if (!parseResult.success) {
+                log.error({ error: parseResult.error.message }, "Token response inválido do Strava");
+                throw new Error("Resposta inválida do Strava");
             }
+            const tokenData = parseResult.data;
 
             const { access_token, refresh_token, expires_at, athlete } = tokenData;
 

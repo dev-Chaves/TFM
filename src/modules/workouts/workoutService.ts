@@ -157,7 +157,7 @@ const workoutService = {
 
             const hoje = new Date().toISOString().split('T')[0];
 
-            const workoutDate = new Date(w.scheduleDate).toISOString().split("T")[0];
+            const workoutDate = new Date(w.scheduleDate + 'T12:00:00').toISOString().split("T")[0];
 
             let status: DashboardItem['status'] = 'Pendente';
 
