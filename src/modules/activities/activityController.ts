@@ -20,12 +20,16 @@ const activityController = {
      */
     async getActivities(c: Context): Promise<Response> {
         const id = Number(c.get("userId"));
-        const limit = Number(c.req.query("limit")) || 30;
-        const page = Number(c.req.query("page")) || 1;
+        let limit = Number(c.req.query("limit")) || 30;
+        let page = Number(c.req.query("page")) || 1;
         
         if(Number.isNaN(id)) {
             return c.json<ErrorResponse>({erro: `ID Inválido`}, 400);
         }
+
+        // Valida paginação
+        if (limit <= 0 || limit > 100) limit = 30;
+        if (page <= 0) page = 1;
 
         try {
             const activities: ActivityResponseDTO[] = await activityService.getActivities(id, limit, page);

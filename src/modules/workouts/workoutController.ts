@@ -66,12 +66,16 @@ const workoutController = {
     async getWorkoutByUserId(c: Context): Promise<Response> {
 
         const userId = Number(c.get("userId"));
-        const limit = Number(c.req.query("limit")) || 30;
-        const page = Number(c.req.query("page")) || 1;
+        let limit = Number(c.req.query("limit")) || 30;
+        let page = Number(c.req.query("page")) || 1;
 
         if(Number.isNaN(userId)) {
             return c.json<ErrorResponse>({erro: `ID Inválido`} as unknown as ErrorResponse, 400);
         }
+
+        // Valida paginação
+        if (limit <= 0 || limit > 100) limit = 30;
+        if (page <= 0) page = 1;
 
         try {
             const response: DashboardItem[] = await workoutService.getDashboardData(userId, limit, page);
