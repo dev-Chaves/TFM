@@ -77,7 +77,9 @@ function transformFrontendPayloadToGoalConfig(payload: FrontendGoalPayload): Goa
         weeklyFrequency: parseInt(payload.weeklyAvailability, 10) || 3,
         experienceLevel: mapExperienceLevel(payload.currentLevel),
         text: buildGoalText(payload.targetRace, payload.targetTime, payload.additionalNotes),
-        availableDays: (payload.availableDays ?? []) as DayOfWeek[]
+        availableDays: (payload.availableDays ?? []).filter((d: number): d is DayOfWeek =>
+            d >= 0 && d <= 6
+        ) as DayOfWeek[]
     };
 }
 

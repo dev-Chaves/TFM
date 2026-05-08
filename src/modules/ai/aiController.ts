@@ -61,9 +61,13 @@ const aiController = {
         } catch(err) {
             const errorMessage = err instanceof Error ? err.message : "Erro interno no servidor.";
             log.error({ userId, error: errorMessage }, "Erro ao gerar plano de treino");
+            // Diferencia erros de validação (400) de erros internos (500)
+            const isValidationError = errorMessage.includes("meta") ||
+                                      errorMessage.includes("dias") ||
+                                      errorMessage.includes("esperar");
             return c.json<ErrorResponse>({
                 error: errorMessage
-            }, 400);
+            }, isValidationError ? 400 : 500);
 
         } finally {
             // Liberar lock SEMPRE

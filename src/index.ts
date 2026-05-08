@@ -32,7 +32,7 @@ app.onError((err, c) => {
     }, 400);
   }
 
-  const status = (err as any).status || 500;
+  const status = (err instanceof Error && 'status' in err && typeof err.status === 'number') ? err.status : 500;
   return c.json({
     error: err instanceof Error ? err.message : "Erro interno no servidor."
   }, status);

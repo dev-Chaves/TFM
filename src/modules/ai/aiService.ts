@@ -78,11 +78,6 @@ const aiService = {
             .map(a => `- Data: ${a.data}, Tipo: ${a.tipo}, Dist: ${a.distancia_km}, Tempo: ${a.tempo_movimento}, Pace: ${a.pace_medio}, FC: ${a.frequencia_cardiaca}`)
             .join("\n");
 
-        if(user.currentGoal == null || user.currentGoal == undefined) {
-            log.warn({ userId }, "Usuário não possui metas");
-            throw new Error("Usuário não possui metas, cadastre uma meta para gerar um plano de treino.");
-        }
-
         const goal = user.currentGoal;
 
         const baselineStats = calculateBaseline(

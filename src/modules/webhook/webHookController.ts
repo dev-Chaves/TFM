@@ -29,7 +29,13 @@ const webHookController = {
         const token = c.req.query("hub.verify_token");
         const challenge = c.req.query("hub.challenge");   
 
-        if (mode === "subscribe" && token === process.env.WEBHOOK_VERIFICATION_TOKEN) {
+        const webhookToken = process.env.WEBHOOK_VERIFICATION_TOKEN;
+        if (!webhookToken) {
+            log.error("WEBHOOK_VERIFICATION_TOKEN não configurado");
+            return c.json<ErrorResponse>({error: "Token não configurado"}, 500);
+        }
+
+        if (mode === "subscribe" && token === webhookToken) {
             log.info("Webhook verificado com sucesso");
             return c.json<WebhookChallengeResponse>({"hub.challenge": challenge || ""});
         }
@@ -50,13 +56,11 @@ const webHookController = {
             // Valida o evento com Zod
             const parseResult = StravaWebhookEventSchema.safeParse(rawEvent);
             
-            let event: StravaWebhookEvent;
-            if (parseResult.success) {
-                event = parseResult.data;
-            } else {
-                log.warn({ error: parseResult.error.message }, "Evento de webhook inválido");
-                event = rawEvent as StravaWebhookEvent;
+            if (!parseResult.success) {
+                log.error({ error: parseResult.error.message }, "Evento de webhook inválido");
+                return c.json<ErrorResponse>({error: "Evento inválido"}, 400);
             }
+            const event = parseResult.data;
 
             log.info({ 
                 objectType: event.object_type, 
