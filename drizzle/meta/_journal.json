@@ -8,6 +8,13 @@
       "when": 1770302189146,
       "tag": "0000_add_workout_rate_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1746712800000,
+      "tag": "0001_fix_weight_typo",
+      "breakpoints": true
     }
   ]
 }

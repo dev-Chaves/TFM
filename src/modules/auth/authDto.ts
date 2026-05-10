@@ -27,7 +27,7 @@ export const StravaTokenResponseSchema = z.object({
     access_token: z.string(),
     refresh_token: z.string(),
     expires_at: z.number(),
-    athlete: StravaAthleteResponseSchema,
+    athlete: StravaAthleteResponseSchema.optional(),
 });
 
 export type StravaTokenResponse = z.infer<typeof StravaTokenResponseSchema>;

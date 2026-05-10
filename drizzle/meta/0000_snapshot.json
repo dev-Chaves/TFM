@@ -121,8 +121,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "weigth": {
-          "name": "weigth",
+        "weight": {
+          "name": "weight",
           "type": "real",
           "primaryKey": false,
           "notNull": false
