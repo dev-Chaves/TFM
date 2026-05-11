@@ -102,10 +102,20 @@ const workoutRepository = {
         }).where(eq(workouts.id, workoutId));
     },
 
-    async getWorkoutsWithActivities(userId: number, limit = 30, page = 1) {
+    async getWorkoutsWithActivities(userId: number, limit = 30, page = 1, startDate?: string, endDate?: string) {
         const offset = (page - 1) * limit;
+
+        let whereCondition = eq(workouts.userId, userId);
+        if (startDate && endDate) {
+            whereCondition = and(
+                whereCondition,
+                gte(workouts.scheduleDate, startDate),
+                lte(workouts.scheduleDate, endDate)
+            );
+        }
+
         return db.query.workouts.findMany({
-            where: eq(workouts.userId, userId),
+            where: whereCondition,
             orderBy: [desc(workouts.scheduleDate)],
             with: {
                 activity: true

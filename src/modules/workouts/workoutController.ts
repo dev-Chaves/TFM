@@ -68,6 +68,8 @@ const workoutController = {
         const userId = Number(c.get("userId"));
         let limit = Number(c.req.query("limit")) || 30;
         let page = Number(c.req.query("page")) || 1;
+        const startDate = c.req.query("startDate") || undefined;
+        const endDate = c.req.query("endDate") || undefined;
 
         if(Number.isNaN(userId)) {
             return c.json<ErrorResponse>({erro: `ID Inválido`} as unknown as ErrorResponse, 400);
@@ -77,8 +79,17 @@ const workoutController = {
         if (limit <= 0 || limit > 100) limit = 30;
         if (page <= 0) page = 1;
 
+        // Valida datas se fornecidas
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (startDate && !dateRegex.test(startDate)) {
+            return c.json<ErrorResponse>({error: "Formato de startDate inválido (YYYY-MM-DD)"}, 400);
+        }
+        if (endDate && !dateRegex.test(endDate)) {
+            return c.json<ErrorResponse>({error: "Formato de endDate inválido (YYYY-MM-DD)"}, 400);
+        }
+
         try {
-            const response: DashboardItem[] = await workoutService.getDashboardData(userId, limit, page);
+            const response: DashboardItem[] = await workoutService.getDashboardData(userId, limit, page, startDate, endDate);
 
             if(response.length === 0){
                 c.header("Cache-Control", "no-store");
