@@ -402,6 +402,7 @@ export const GoalConfigSchema = z.object({
     experienceLevel: z.enum(["beginner", "intermediate", "advanced"]),
     text: z.string().optional(),
     availableDays: z.array(DayOfWeekSchema).optional(),
+    contextNotes: z.string().optional(),
 });
 
 export type GoalConfig = z.infer<typeof GoalConfigSchema>;

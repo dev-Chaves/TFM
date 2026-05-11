@@ -33,8 +33,14 @@ Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de
 - OBRIGATÓRIO: Use o campo \`segmentos\` na fase principal para listar a estratégia km a km (ou por blocos lógicos).
 - ZONAS DE FC: Indique OBRIGATORIAMENTE a zona de frequência cardíaca (Z1-Z5) para cada segmento ou série.
 - Cada treino DEVE ter: aquecimento, parte principal e desaquecimento devidamente separados.
-- O pace da rodagem (treino leve) deve ser IGUAL ou até 20s MAIS LENTO que o Pace Médio Geral da baseline.
+- O pace da rodagem (treino leve) deve ser IGUAL ou até 20s MAIS LENTO que o Pace Médio Geral da baseline. PORÉM, se a baseline indicar alta variância de pace (Pace Médio de Treino muito mais rápido que o geral), use o PACE MÉDIO DE TREINO como âncora.
 - Para treinos intervalados, o pace alvo NUNCA deve ser irrealista em relação ao 'Melhor Pace Mantido' registrado na baseline.
+
+⚠️ DISCREPÂNCIA DE PACE (CORRIDAS SOCIAIS/REGENERATIVAS):
+- Se o histórico contiver corridas muito mais lentas que a capacidade real do atleta (ex: corridas com parceiro em pace 6:00-8:00 quando o pace real é 4:00-5:20), o "Pace Médio de Treino" filtrará essas corridas e será mais preciso.
+- NESTES CASOS: use o PACE MÉDIO DE TREINO como âncora para TODOS os treinos, NÃO o Pace Médio Geral.
+- A rodagem (treino leve) deve ser: Pace Médio de Treino + 15 a 25 segundos (não a média geral).
+- Inclua na mensagem_coach um aviso educado de que os paces foram ajustados para refletir a capacidade real do atleta, ignorando corridas sociais no cálculo.
 
 🏃 REGRAS PARA INTERVALADOS (OBRIGATÓRIO):
 - Use o campo \`series\` na fase principal para treinos intervalados.
@@ -59,7 +65,7 @@ export function getWorkoutGenerationUserPrompt(
     user: { name?: string | null, weight?: number | null },
     goal: GoalConfig,
     historyContext: string,
-    baselineStats: { avgPace: string, maxDistance: number, bestPace: string }
+    baselineStats: { avgPace: string, maxDistance: number, bestPace: string, trainingAvgPace: string, hasHighPaceVariance: boolean }
 ): string {
     return `
 🎯 MISSÃO: Crie um plano de treino MENSAL (4 semanas) personalizado para este atleta.
@@ -83,16 +89,25 @@ Dias Disponíveis: ${goal.availableDays ? goal.availableDays.map((d: number) => 
 ════════════════════════════════════════
 🧮 BASELINE MATEMÁTICA (Resumo do Histórico)
 ════════════════════════════════════════
-- Pace Médio Geral: ${baselineStats.avgPace} min/km
+- Pace Médio Geral (todas as corridas): ${baselineStats.avgPace} min/km
+- Pace Médio de Treino (exclui sociais/regenerativas): ${baselineStats.trainingAvgPace} min/km
 - Maior Distância Recente: ${baselineStats.maxDistance} km
 - Melhor Pace Mantido: ${baselineStats.bestPace} min/km
 
-ATENÇÃO: Utilize o "Pace Médio Geral" como âncora para os treinos de rodagem. Não crie treinos de rodagem mais rápidos que esta média a menos que o treino exija intensidade. A distância do treino longo não deve saltar absurdamente além da "Maior Distância Recente" (+10% máx).
+ATENÇÃO: Utilize o "Pace Médio de Treino" como âncora principal para os treinos de rodagem, a menos que não haja discrepância (os dois paces forem similares). Não crie treinos de rodagem mais rápidos que esta média a menos que o treino exija intensidade. A distância do treino longo não deve saltar absurdamente além da "Maior Distância Recente" (+10% máx).
+${baselineStats.hasHighPaceVariance ? `
+⚠️ VARIÂNCIA ALTA DETECTADA: O histórico contém corridas significativamente mais lentas que a capacidade real. Use o Pace Médio de Treino como referência e ignore o Pace Médio Geral para definir os treinos.
+` : ''}
 
 ════════════════════════════════════════
 📈 HISTÓRICO RECENTE (Últimos treinos)
 ════════════════════════════════════════
 ${historyContext || "Sem histórico disponível - atleta novo, seja conservador nos paces"}
+
+════════════════════════════════════════
+📝 CONTEXTO DO ATLETA
+════════════════════════════════════════
+${goal.contextNotes || "Nenhuma observação adicional."}
 
 ════════════════════════════════════════
 📝 INSTRUÇÕES DE GERAÇÃO

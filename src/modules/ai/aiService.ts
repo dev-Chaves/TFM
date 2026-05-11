@@ -94,6 +94,14 @@ const aiService = {
             baselineStats
         );
 
+        log.info({
+            userId,
+            avgPace: baselineStats.avgPace,
+            trainingAvgPace: baselineStats.trainingAvgPace,
+            hasVariance: baselineStats.hasHighPaceVariance,
+            contextNotes: goal.contextNotes ? "Sim" : "Não"
+        }, "Baseline calculada para geração de treino");
+
 
         const aiContent = await generateCompletion({
             messages: [

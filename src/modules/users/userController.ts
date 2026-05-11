@@ -18,6 +18,7 @@ interface FrontendGoalPayload {
     weeklyAvailability: string;
     availableDays: number[];
     additionalNotes: string;
+    contextNotes: string;
 }
 
 // =============================================
@@ -79,7 +80,8 @@ function transformFrontendPayloadToGoalConfig(payload: FrontendGoalPayload): Goa
         text: buildGoalText(payload.targetRace, payload.targetTime, payload.additionalNotes),
         availableDays: (payload.availableDays ?? []).filter((d: number): d is DayOfWeek =>
             d >= 0 && d <= 6
-        ) as DayOfWeek[]
+        ) as DayOfWeek[],
+        contextNotes: payload.contextNotes || undefined,
     };
 }
 
