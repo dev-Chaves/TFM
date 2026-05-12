@@ -96,7 +96,9 @@ const userController = {
 
         if(Number.isNaN(userId)) return c.json({error: `ID Inválido`}, 400);
 
-        const frontendPayload: FrontendGoalPayload = await c.req.json();
+        const body = await c.req.json() as Record<string, unknown>;
+        const generatePlan = body.generatePlan !== false;
+        const frontendPayload = body as unknown as FrontendGoalPayload;
         
         // Transforma o payload do frontend para o formato GoalConfig
         const goalData = transformFrontendPayloadToGoalConfig(frontendPayload);
@@ -104,12 +106,16 @@ const userController = {
         try{    
             await userService.updateGoal(userId, goalData);
 
-            // Fire-and-forget: gera o plano de treino em background
-            aiService.generateWorkoutPlan(userId)
-                .then(() => log.info({ userId }, "Plano de treino gerado automaticamente após cadastro de meta"))
-                .catch((err) => log.warn({ userId, error: err instanceof Error ? err.message : err }, "Não foi possível gerar plano automaticamente (será gerado manualmente)"));
+            if (generatePlan) {
+                aiService.generateWorkoutPlan(userId)
+                    .then(() => log.info({ userId }, "Plano de treino gerado automaticamente após cadastro de meta"))
+                    .catch((err) => log.warn({ userId, error: err instanceof Error ? err.message : err }, "Não foi possível gerar plano automaticamente (será gerado manualmente)"));
+            }
         
-            return c.json({message: "Objetivo atualizado com sucesso. Seu plano de treinos está sendo gerado!"}); 
+            return c.json({message: generatePlan
+                ? "Objetivo atualizado com sucesso. Seu plano de treinos está sendo gerado!"
+                : "Objetivo atualizado com sucesso."
+            }); 
 
         } catch (error) {
             return c.json({error: "Erro ao atualizar objetivo."}, 500);
