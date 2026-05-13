@@ -229,13 +229,17 @@ export function getWorkoutFeedbackUserPrompt(
     splitsTexto: string,
     currentPace: string,
     targetPace: string,
-    paceDiff: string
+    paceDiff: string,
+    workoutDescription?: string,
+    scheduleDate?: string
 ): string {
     return `
 ════════════════════════════════════════
 📋 TREINO PLANEJADO — FASE PRINCIPAL APENAS
 ════════════════════════════════════════
+Data agendada: ${scheduleDate || "N/A"}
 Tipo: ${planned?.tipo || "Corrida"}
+${workoutDescription ? `Descrição completa: ${workoutDescription}` : ""}
 Objetivo: ${planned?.objetivo_sessao || "Treino padrão"}
 Distância Alvo (fase principal): ${planned?.distancia_km || "N/A"}km
 Pace Alvo (fase principal): ${targetPace} min/km

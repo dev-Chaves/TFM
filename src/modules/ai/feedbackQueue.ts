@@ -1,7 +1,7 @@
 import aiService from "./aiService";
 import activityService from "../activities/activityService";
 import activityRepository from "../activities/activityRepository";
-import { StravaActivity, WorkoutStructure } from "../../shared/schemas";
+import { StravaActivity } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 
 const log = createLogger("FeedbackQueue");
@@ -12,7 +12,6 @@ const log = createLogger("FeedbackQueue");
 interface PendingFeedback {
     userId: number;
     workoutId: number;
-    planned: WorkoutStructure | null;
     actual: StravaActivity;
     attempts: number;
     lastAttempt: Date;
@@ -37,14 +36,12 @@ const RETRY_DELAYS_MS = [30000, 60000, 120000]; // 30s, 1min, 2min
 export async function queueFeedbackGeneration(
     userId: number,
     workoutId: number,
-    planned: WorkoutStructure | null,
     actual: StravaActivity
 ): Promise<void> {
     
     const pending = pendingQueue.get(workoutId) || {
         userId,
         workoutId,
-        planned,
         actual,
         attempts: 0,
         lastAttempt: new Date()
@@ -65,7 +62,7 @@ export async function queueFeedbackGeneration(
             );
         }
         
-        await aiService.generateWorkoutFeedback(userId, workoutId, planned, enrichedActivity);
+        await aiService.generateWorkoutFeedback(userId, workoutId, enrichedActivity);
         
         // Sucesso: remove da queue
         pendingQueue.delete(workoutId);
@@ -90,7 +87,7 @@ export async function queueFeedbackGeneration(
             }, "Feedback falhou, agendando retry");
             
             setTimeout(() => {
-                queueFeedbackGeneration(userId, workoutId, planned, actual);
+                queueFeedbackGeneration(userId, workoutId, actual);
             }, delay);
             
         } else {

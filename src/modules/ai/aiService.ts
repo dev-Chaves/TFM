@@ -3,6 +3,7 @@ import userRepository from "../users/userRepository";
 import activityRepository from "../activities/activityRepository";
 import { calculateBaseline, calculatePace, formatActivyForAI, parsePace, formatPaceFromDecimal } from "./aiFormatter";
 import workoutService from "../workouts/workoutService";
+import workoutRepository from "../workouts/workoutRepository";
 import { 
     getWorkoutGenerationSystemPrompt,
     getWorkoutGenerationUserPrompt,
@@ -144,13 +145,16 @@ const aiService = {
     async generateWorkoutFeedback(
         userId: number,
         workoutId: number,
-        planned: WorkoutStructure | null,
         actual: StravaActivity
     ): Promise<void> {
 
         const user = await userRepository.getUserById(userId);
-
         if(!user) throw new Error("Usuário não encontrado");
+
+        const workout = await workoutRepository.getWorkoutById(workoutId);
+        if (!workout) throw new Error("Workout não encontrado");
+
+        const planned = workout.structure as WorkoutStructure | null;
 
         // 1. Formatar Splits
         let splitsTexto = "Não disponível";
@@ -204,7 +208,9 @@ const aiService = {
             splitsTexto,
             calculatePace(actual.average_speed),
             targetPace,
-            paceDiff
+            paceDiff,
+            workout.description,
+            workout.scheduleDate
         );
 
 

@@ -283,7 +283,6 @@ const activityService = {
                     queueFeedbackGeneration(
                         match.userId, 
                         match.id,
-                        match.structure,
                         rawActivityData
                     );
                 }
