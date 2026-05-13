@@ -1,7 +1,9 @@
 import userService from "./userService";
+import userRepository from "./userRepository";
 import { Context } from "hono";
 import { DayOfWeek, GoalConfig } from "../../shared/schemas";
 import aiService from "../ai/aiService";
+import activityRepository from "../activities/activityRepository";
 import { createLogger } from "../../shared/utils/logger";
 
 const log = createLogger("UserController");
@@ -89,6 +91,24 @@ function transformFrontendPayloadToGoalConfig(payload: FrontendGoalPayload): Goa
 // Controller
 // =============================================
 const userController = {
+
+    async getOnboardingStatus(c: Context) {
+        const userId = Number(c.get("userId"));
+
+        if(Number.isNaN(userId)) return c.json({error: `ID Inválido`}, 400);
+
+        const user = await userRepository.getUserById(userId);
+        if (!user) return c.json({error: "Usuário não encontrado"}, 404);
+
+        const hasActivities = await activityRepository.hasUserRunActivity(userId);
+        const hasGoal = !!user.currentGoal;
+
+        return c.json({
+            hasActivities,
+            hasGoal,
+            needsChallenge: !hasActivities && !hasGoal,
+        });
+    },
 
     async updateGoal(c: Context) {
 

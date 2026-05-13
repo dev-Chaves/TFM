@@ -6,6 +6,7 @@ const users = new Hono();
 
 users.use("/*", authMiddleware);
 
+users.get("/onboarding", userController.getOnboardingStatus);
 users.patch("/goal", userController.updateGoal);
 
 export default users;

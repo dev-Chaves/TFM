@@ -1,6 +1,12 @@
 import { calculatePace } from "../ai/aiFormatter";
 import { StravaActivity } from "../../shared/schemas";
 
+export interface SyncActivitiesResponse {
+    message: string;
+    new_activities_linked: number;
+    challengeCompleted?: boolean;
+}
+
 export interface SaveActivityDTO {
   userId: number;
   stravaActivityId: number;

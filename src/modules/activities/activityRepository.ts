@@ -74,6 +74,19 @@ const activityRepository = {
                 eq(activities.stravaActivityId, stravaActivityId)
             )
         });
+    },
+
+    /**
+     * Verifica se o usuário tem pelo menos uma atividade do tipo Run
+     */
+    async hasUserRunActivity(userId: number): Promise<boolean> {
+        const result = await db.query.activities.findFirst({
+            where: (activities, { eq, and }) => and(
+                eq(activities.userId, userId),
+                eq(activities.type, "Run")
+            )
+        });
+        return !!result;
     }
 
 }

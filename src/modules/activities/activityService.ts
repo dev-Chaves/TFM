@@ -4,20 +4,15 @@ import userRepository from "../users/userRepository"
 import workoutRepository from "../workouts/workoutRepository";
 import activityRepository from "./activityRepository";
 import authService from "../auth/authService";
-import { ActivityResponseDTO, toActivityResponseDTO, ActivityEntity } from "./activitiesDTO";
+import { ActivityResponseDTO, toActivityResponseDTO, ActivityEntity, SyncActivitiesResponse } from "./activitiesDTO";
 import { StravaActivity, StravaActivitySchema, WorkoutStructure } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 import { queueFeedbackGeneration } from "../ai/feedbackQueue";
 
 const log = createLogger("ActivityService");
 
-/**
- * Response type for sync activities operation
- */
-export interface SyncActivitiesResponse {
-    message: string;
-    new_activities_linked: number;
-}
+// Response type re-exported from DTO for backward compatibility
+export type { SyncActivitiesResponse };
 
 /**
  * Tipo interno para atividade salva com rawData
@@ -290,11 +285,19 @@ const activityService = {
 
         }
 
+        // Detecta se o usuário completou o desafio (primeira corrida)
+        const hadRunBefore = await activityRepository.hasUserRunActivity(userId);
+        const savedRunActivities = savedActivities.filter(
+            a => a.type === "Run"
+        );
+        const challengeCompleted = !hadRunBefore && savedRunActivities.length > 0;
+
         log.info({ userId, newActivities: savedActivities.length, matchesFound }, "Sincronização concluída");
 
         return {
             message: `Sincronização realizada com sucesso`,
-            new_activities_linked: matchesFound
+            new_activities_linked: matchesFound,
+            challengeCompleted: challengeCompleted || undefined
         };
 
     },
