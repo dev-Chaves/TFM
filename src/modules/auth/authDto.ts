@@ -14,7 +14,7 @@ export const StravaAthleteResponseSchema = z.object({
     bio: z.string().nullable(),
     city: z.string().nullable(),
     profile: z.string(),
-    sex: z.string().optional(),
+    sex: z.string().nullish(),
     weight: z.number().optional(),
 });
 
