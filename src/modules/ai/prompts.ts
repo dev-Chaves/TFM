@@ -65,7 +65,8 @@ export function getWorkoutGenerationUserPrompt(
     user: { name?: string | null, weight?: number | null },
     goal: GoalConfig,
     historyContext: string,
-    baselineStats: { avgPace: string, maxDistance: number, bestPace: string, trainingAvgPace: string, hasHighPaceVariance: boolean }
+    baselineStats: { avgPace: string, maxDistance: number, bestPace: string, trainingAvgPace: string, hasHighPaceVariance: boolean },
+    declaredPace?: { currentPace?: string; targetPace?: string }
 ): string {
     return `
 🎯 MISSÃO: Crie um plano de treino MENSAL (4 semanas) personalizado para este atleta.
@@ -108,6 +109,18 @@ ${historyContext || "Sem histórico disponível - atleta novo, seja conservador 
 📝 CONTEXTO DO ATLETA
 ════════════════════════════════════════
 ${goal.contextNotes || "Nenhuma observação adicional."}
+${declaredPace ? `
+════════════════════════════════════════
+🎯 PACES DECLARADOS PELO ATLETA (sem histórico)
+════════════════════════════════════════
+- Pace atual informado: ${declaredPace.currentPace || "não informado"} min/km
+- Pace alvo informado: ${declaredPace.targetPace || "não informado"} min/km
+
+ATENÇÃO: O atleta não possui corridas registradas no Strava. Não há baseline real para calcular os paces.
+Use o PACE ATUAL informado (${declaredPace.currentPace || "N/A"}) como âncora para treinos de rodagem (ritmo confortável).
+Use o PACE ALVO informado (${declaredPace.targetPace || "N/A"}) como referência para treinos de intensidade (tiros, tempo run).
+Crie uma progressão realista entre o pace atual e o pace alvo ao longo das 4 semanas.
+` : ''}
 
 ════════════════════════════════════════
 📝 INSTRUÇÕES DE GERAÇÃO

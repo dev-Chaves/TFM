@@ -41,7 +41,10 @@ const aiService = {
     /**
      * Gera um plano de treino semanal personalizado usando IA
      */
-    async generateWorkoutPlan(userId: number): Promise<GenerateWorkoutPlanResponse> {
+    async generateWorkoutPlan(
+        userId: number,
+        options?: { currentPace?: string; targetPace?: string }
+    ): Promise<GenerateWorkoutPlanResponse> {
 
         log.info({ userId }, "Iniciando geração de plano de treino");
 
@@ -92,7 +95,8 @@ const aiService = {
             { name: user.name, weight: user.weight },
             goal,
             historyContext,
-            baselineStats
+            baselineStats,
+            options?.currentPace || options?.targetPace ? { currentPace: options.currentPace, targetPace: options.targetPace } : undefined
         );
 
         log.info({

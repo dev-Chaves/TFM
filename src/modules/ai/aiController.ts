@@ -53,7 +53,10 @@ const aiController = {
             generationLocks.set(userId, true);
             log.info({ userId }, "Iniciando geração de plano de treino");
 
-            const response = await aiService.generateWorkoutPlan(userId);
+            const currentPace = c.req.query("currentPace") || undefined;
+            const targetPace = c.req.query("targetPace") || undefined;
+
+            const response = await aiService.generateWorkoutPlan(userId, { currentPace, targetPace });
 
             log.info({ userId }, "Plano de treino retornado com sucesso");
             return c.json<GenerateWorkoutSuccessResponse>(response);
