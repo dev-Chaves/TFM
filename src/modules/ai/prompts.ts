@@ -44,6 +44,7 @@ Você é o COACH VIRTUAL, um treinador de corrida de rua de elite com 20 anos de
 
 🏃 REGRAS PARA INTERVALADOS (OBRIGATÓRIO):
 - Use o campo \`series\` na fase principal para treinos intervalados.
+- NESTE CASO, o campo \`tipo_estrutura\` da fase principal DEVE ser EXATAMENTE \`"intervalado"\` (NÃO use \`"series"\` como valor de \`tipo_estrutura\`).
 - Cada série DEVE conter:
   - \`repeticoes\`: Número de repetições (ex: 6)
   - \`distancia_m\`: Distância em metros (ex: 800)
@@ -168,6 +169,29 @@ Crie uma progressão realista entre o pace atual e o pace alvo ao longo das 4 se
                     "dicas_execucao": ["Não arranque forte demais no primeiro tiro"],
                     "sensacao_esperada": "Confortável",
                     "descricao_completa": "..."
+                },
+                {
+                    "dia": 2,
+                    "tipo": "INTERVALADO",
+                    "titulo": "⚡ Tiros Curtos",
+                    "objetivo_sessao": "Desenvolver velocidade",
+                    "distancia_total_km": 5,
+                    "tempo_estimado_min": 40,
+                    "fases": {
+                        "aquecimento": { "duracao_min": 10, "descricao": "Trote leve", "pace_sugerido": "6:00", "intensidade": "Leve" },
+                        "principal": {
+                            "tipo_estrutura": "intervalado",
+                            "descricao_geral": "5x400m com recuperação",
+                            "series": [
+                                { "repeticoes": 5, "distancia_m": 400, "pace_alvo": "4:30", "zona_fc": "Z4", "descanso_tipo": "trote", "descanso_duracao": "200m" }
+                            ],
+                            "como_executar": ["Mantenha o ritmo dos tiros", "Recupere-se trotando entre os tiros"]
+                        },
+                        "desaquecimento": { "duracao_min": 10, "descricao": "Trote leve + alongamento", "pace_sugerido": "6:30", "intensidade": "Muito leve" }
+                    },
+                    "dicas_execucao": ["Mantenha o ritmo dos tiros"],
+                    "sensacao_esperada": "Desafiador",
+                    "descricao_completa": "Treino intervalado para desenvolver velocidade"
                 }
             ]
         }
