@@ -13,7 +13,7 @@ export const groqProvider: AIProvider = {
         const completion = await groq.chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: options.messages,
-            max_tokens: 16384,
+            max_tokens: 8192,
             ...(options.jsonMode && { response_format: { type: "json_object" } })
         });
         

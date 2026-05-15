@@ -14,9 +14,9 @@ export const openRouterProvider: AIProvider = {
     
     async complete(options: AICompletionOptions): Promise<string> {
         const completion = await client.chat.completions.create({
-            model: "deepseek/deepseek-r1-0528:free",
+            model: "deepseek/deepseek-v4-flash:free",
             messages: options.messages,
-            max_tokens: 16384,
+            max_tokens: 8192,
             ...(options.jsonMode && { response_format: { type: "json_object" } })
         });
         
