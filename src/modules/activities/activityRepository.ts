@@ -77,6 +77,15 @@ const activityRepository = {
     },
 
     /**
+     * Busca uma atividade pelo ID do banco de dados
+     */
+    async getActivityById(id: number) {
+        return await db.query.activities.findFirst({
+            where: eq(activities.id, id)
+        });
+    },
+
+    /**
      * Verifica se o usuário tem pelo menos uma atividade do tipo Run
      */
     async hasUserRunActivity(userId: number): Promise<boolean> {

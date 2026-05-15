@@ -10,4 +10,6 @@ workouts.post("/", workoutController.saveWorkout);
 
 workouts.get("/", workoutController.getWorkoutByUserId);
 
+workouts.post("/:id/feedback-retry", workoutController.requestFeedbackRetry);
+
 export default workouts;

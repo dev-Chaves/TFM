@@ -246,6 +246,7 @@ const aiService = {
 
         } catch (error) {
             log.error({ workoutId, error: error instanceof Error ? error.message : error }, "Erro ao analisar treino");
+            throw error;
         }
     },
 

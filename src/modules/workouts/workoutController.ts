@@ -104,8 +104,26 @@ const workoutController = {
             return c.json<ErrorResponse>({error: "Erro ao buscar dados."}, 500);
         }
 
-    }
+    },
 
+    async requestFeedbackRetry(c: Context): Promise<Response> {
+        const userId = Number(c.get("userId"));
+        const workoutId = Number(c.req.param("id"));
+
+        if (Number.isNaN(userId) || Number.isNaN(workoutId)) {
+            return c.json<ErrorResponse>({error: "ID inválido"}, 400);
+        }
+
+        try {
+            await workoutService.requestFeedbackRetry(userId, workoutId);
+            return c.json({ message: "Feedback será gerado em breve." });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Erro ao solicitar feedback";
+            const status = message.includes("já solicitou") || message.includes("não encontrado") || message.includes("não foi concluído") || message.includes("já foi gerado")
+                ? 400 : 500;
+            return c.json<ErrorResponse>({error: message}, status);
+        }
+    },
 };
 
 export default workoutController;

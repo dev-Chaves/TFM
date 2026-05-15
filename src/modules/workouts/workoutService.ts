@@ -4,17 +4,22 @@ import { calculatePace } from "../ai/aiFormatter";
 import { DashboardItem, SaveWorkoutDTO, DashboardCoachFeedback } from "./workoutDTO";
 import workoutRepository from "./workoutRepository";
 import userRepository from "../users/userRepository";
+import activityRepository from "../activities/activityRepository";
+import { queueFeedbackGeneration } from "../ai/feedbackQueue";
 import { 
     DayOfWeek, 
     PlanoSemanalAI, 
     PlanoMensalAI,
     WorkoutStructure, 
     AiFeedbackWrapper,
-    FasesTreino 
+    FasesTreino,
+    StravaActivity
 } from "../../shared/schemas";
 import { createLogger } from "../../shared/utils/logger";
 
 const log = createLogger("WorkoutService");
+
+const feedbackRetryRequested = new Set<number>();
 
 // Função auxiliar para encontrar as próximas datas disponíveis
 // Se startAfterDate for passado, começa a buscar a partir do dia seguinte a essa data
@@ -240,8 +245,31 @@ const workoutService = {
                 coach: coach
             };
         });
-    }
+    },
 
+    async requestFeedbackRetry(userId: number, workoutId: number): Promise<void> {
+        if (feedbackRetryRequested.has(workoutId)) {
+            throw new Error("Você já solicitou o feedback para este treino.");
+        }
+
+        const workout = await workoutRepository.getWorkoutById(workoutId);
+        if (!workout) throw new Error("Treino não encontrado");
+        if (workout.userId !== userId) throw new Error("Treino não pertence ao usuário");
+        if (!workout.completedActivityId) throw new Error("Treino ainda não foi concluído");
+        if (workout.aiFeedback) throw new Error("Feedback já foi gerado para este treino");
+
+        const activity = await activityRepository.getActivityById(workout.completedActivityId);
+        if (!activity) throw new Error("Atividade vinculada não encontrada");
+
+        const rawData = activity.rawData as StravaActivity | null;
+        if (!rawData) throw new Error("Dados da atividade não disponíveis");
+
+        feedbackRetryRequested.add(workoutId);
+        
+        queueFeedbackGeneration(userId, workoutId, rawData);
+        
+        log.info({ workoutId, userId }, "Feedback retry solicitado manualmente pelo usuário");
+    },
 };
 
 export default workoutService;
