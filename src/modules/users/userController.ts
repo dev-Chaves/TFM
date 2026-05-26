@@ -110,6 +110,17 @@ const userController = {
         });
     },
 
+    async getGoal(c: Context) {
+        const userId = Number(c.get("userId"));
+
+        if(Number.isNaN(userId)) return c.json({error: `ID Inválido`}, 400);
+
+        const user = await userRepository.getUserById(userId);
+        if (!user) return c.json({error: "Usuário não encontrado"}, 404);
+
+        return c.json({ goal: user.currentGoal ?? null });
+    },
+
     async updateGoal(c: Context) {
 
         const userId = Number(c.get("userId"));
